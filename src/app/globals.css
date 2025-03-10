@@ -115,3 +115,14 @@ body {
   .hover-sd {
     @apply hover:duration-200 hover:scale-95 hover:cursor-pointer hover:opacity-80
   }
+
+  
+
+  @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
