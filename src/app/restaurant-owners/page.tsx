@@ -1,14 +1,29 @@
-'use client'
-import React, { useEffect, useState } from 'react';
-import { Eye, Pencil, Power, Trash } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+"use client";
+import React, { useEffect, useState } from "react";
+import { Eye, Power, Trash } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowUpDown, MoreHorizontal } from "lucide-react";
-import { TableHeader, TableBody, Table, TableRow, TableCell, TableHead } from '@/components/ui/table';
-import { useReactTable, getCoreRowModel, flexRender } from "@tanstack/react-table";
-import { restaurantService } from '@/services/restaurantService';
+import {
+  TableHeader,
+  TableBody,
+  Table,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+} from "@tanstack/react-table";
+import { restaurantService } from "@/services/companion-admin/restaurantService";
 
 interface Restaurant {
   id: string;
@@ -23,7 +38,10 @@ export const columns: ColumnDef<Restaurant>[] = [
     id: "select",
     header: ({ table }) => (
       <Checkbox
-        checked={table.getIsAllPageRowsSelected() || (table.getIsSomePageRowsSelected() && "indeterminate")}
+        checked={
+          table.getIsAllPageRowsSelected() ||
+          (table.getIsSomePageRowsSelected() && "indeterminate")
+        }
         onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
         aria-label="Select all"
       />
@@ -41,27 +59,39 @@ export const columns: ColumnDef<Restaurant>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <Button className='text-center' variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+      <Button
+        className="text-center"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
         Restaurant Name
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => <div className="text-center">{row.getValue("name")}</div>,
+    cell: ({ row }) => (
+      <div className="text-center">{row.getValue("name")}</div>
+    ),
   },
   {
     accessorKey: "owner",
     header: ({ column }) => (
-      <Button className='text-center' variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
+      <Button
+        className="text-center"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
         Owner
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => <div className="text-center">{row.getValue("owner")}</div>,
+    cell: ({ row }) => (
+      <div className="text-center">{row.getValue("owner")}</div>
+    ),
   },
   {
     accessorKey: "status",
-    header: ({ column }) => (
-      <Button className='text-center bg-slate-300' variant="ghost">
+    header: () => (
+      <Button className="text-center bg-slate-300" variant="ghost">
         Status
       </Button>
     ),
@@ -69,10 +99,16 @@ export const columns: ColumnDef<Restaurant>[] = [
       const status = row.getValue("status") as string;
       return (
         <div className="text-center">
-          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-            ${status === 'active' ? 'bg-green-100 text-green-800' : 
-            status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-            'bg-red-100 text-red-800'}`}>
+          <span
+            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+            ${
+              status === "active"
+                ? "bg-green-100 text-green-800"
+                : status === "pending"
+                ? "bg-yellow-100 text-yellow-800"
+                : "bg-red-100 text-red-800"
+            }`}
+          >
             {status}
           </span>
         </div>
@@ -111,7 +147,7 @@ export const columns: ColumnDef<Restaurant>[] = [
                 // onClick={() => handleStatusChange(restaurant.id, restaurant.status === 'active' ? 'inactive' : 'active')}
               >
                 <Power className="mr-2 h-4 w-4" />
-                {restaurant.status === 'active' ? 'Deactivate' : 'Activate'}
+                {restaurant.status === "active" ? "Deactivate" : "Activate"}
               </Button>
               <Button
                 variant="ghost"
@@ -134,53 +170,51 @@ const Page = () => {
   const [stats, setStats] = useState({
     total: 1,
     active: 1,
-    ban: 0
+    ban: 0,
   });
 
   useEffect(() => {
-    const result = restaurantService.getAllRestaurants()
-     result.then((res) => {
-      setRestaurants(res.data.map((item: any) => ({
-        id: item._id,
-        name: item.restaurant_name,
-        owner: item.owner_name,
-        status: item.status.is_active ? 'active' : 'inactive',
-        address: item.address
-      })))
-     }).catch((err) => {
-      console.log('check err', err)
-      setRestaurants([])
-     })
+    const result = restaurantService.getAllRestaurants();
+    result
+      .then((res) => {
+        setRestaurants(
+          res.data.map(
+            (item: {
+              _id: string;
+              restaurant_name: string;
+              owner_name: string;
+              status: { is_active: boolean };
+              address: string;
+            }) => ({
+              id: item._id,
+              name: item.restaurant_name,
+              owner: item.owner_name,
+              status: item.status.is_active ? "active" : "inactive",
+              address: item.address,
+            })
+          )
+        );
+      })
+      .catch((err) => {
+        console.log("check err", err);
+        setRestaurants([]);
+      });
   }, []);
-
-  const fetchRestaurants = async () => {
-    try {
-      const response = await restaurantService.getAllRestaurants();
-      setRestaurants(response.data);
-      // Update stats here if needed
-    } catch (error) {
-      console.error('Error fetching restaurants:', error);
-      setRestaurants([]);
-    }
-  };
-
-  // const handleStatusChange = async (id: string, newStatus: string) => {
+  useEffect(() => {
+    setStats({
+      active: 1,
+      total: 1,
+      ban: 0,
+    });
+  }, []);
+  // const fetchRestaurants = async () => {
   //   try {
-  //     await restaurantService.updateRestaurant(id, { status: newStatus });
-  //     fetchRestaurants(); // Refresh the list
+  //     const response = await restaurantService.getAllRestaurants();
+  //     setRestaurants(response.data);
+  //     // Update stats here if needed
   //   } catch (error) {
-  //     console.error('Error updating restaurant status:', error);
-  //   }
-  // };
-
-  // const handleDeleteRestaurant = async (id: string) => {
-  //   if (window.confirm('Are you sure you want to delete this restaurant?')) {
-  //     try {
-  //       await restaurantService.deleteRestaurant(id);
-  //       fetchRestaurants(); // Refresh the list
-  //     } catch (error) {
-  //       console.error('Error deleting restaurant:', error);
-  //     }
+  //     console.error("Error fetching restaurants:", error);
+  //     setRestaurants([]);
   //   }
   // };
 
@@ -193,18 +227,20 @@ const Page = () => {
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Restaurant Owners Dashboard</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Total Restaurants</h2>
           <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Active Restaurants</h2>
-          <div className="text-3xl font-bold text-green-600">{stats.active}</div>
+          <div className="text-3xl font-bold text-green-600">
+            {stats.active}
+          </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Banned</h2>
           <div className="text-3xl font-bold text-yellow-600">{stats.ban}</div>
@@ -222,7 +258,10 @@ const Page = () => {
                     <TableHead key={header.id}>
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -233,7 +272,10 @@ const Page = () => {
                 <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
