@@ -17,8 +17,8 @@ export const restaurantService = {
         return response.data;
     },
 
-    createRestaurant: async (restaurant: Omit<Restaurant, 'id'>) => {
-        const response = await axiosInstance.post(`${API_ENDPOINTS.RESTAURANTS}`, restaurant);
+    createRestaurant: async () => {
+        const response = await axiosInstance.post(`/companion-admin${API_ENDPOINTS.RESTAURANTS}`);
         return response.data;
     },
 

@@ -65,7 +65,6 @@ export const columns: ColumnDef<Restaurant>[] = [
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Restaurant Name
-        <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
     cell: ({ row }) => (
@@ -168,12 +167,16 @@ export const columns: ColumnDef<Restaurant>[] = [
 const Page = () => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [stats, setStats] = useState({
-    total: 1,
-    active: 1,
+    total: 0,
+    active: 0,
     ban: 0,
   });
 
   useEffect(() => {
+    fetchRestaurants()
+  }, []);
+
+  const fetchRestaurants = async () => {
     const result = restaurantService.getAllRestaurants();
     result
       .then((res) => {
@@ -199,24 +202,27 @@ const Page = () => {
         console.log("check err", err);
         setRestaurants([]);
       });
-  }, []);
+  }
+
   useEffect(() => {
+    // Calculate stats based on the restaurants array
+    const totalCount = restaurants.length;
+    const activeCount = restaurants.filter((r) => r.status === "active").length;
+    const bannedCount = restaurants.filter(
+      (r) => r.status === "inactive"
+    ).length;
+
     setStats({
-      active: 1,
-      total: 1,
-      ban: 0,
+      total: totalCount,
+      active: activeCount,
+      ban: bannedCount,
     });
-  }, []);
-  // const fetchRestaurants = async () => {
-  //   try {
-  //     const response = await restaurantService.getAllRestaurants();
-  //     setRestaurants(response.data);
-  //     // Update stats here if needed
-  //   } catch (error) {
-  //     console.error("Error fetching restaurants:", error);
-  //     setRestaurants([]);
-  //   }
-  // };
+  }, [restaurants]); // Update stats whenever restaurants array changes
+
+  const handleGenerateRestaurant = async () => {
+    const result = await restaurantService.createRestaurant();
+   fetchRestaurants()
+  }
 
   const table = useReactTable({
     data: restaurants,
@@ -243,12 +249,15 @@ const Page = () => {
 
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Banned</h2>
-          <div className="text-3xl font-bold text-yellow-600">{stats.ban}</div>
+          <div className="text-3xl font-bold text-red-600">{stats.ban}</div>
         </div>
       </div>
 
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Restaurant List</h2>
+        <div className="justify-between flex items-center">
+          <h2 className="text-xl font-semibold mb-4">Restaurant List</h2>
+          <Button onClick={handleGenerateRestaurant}>Generate Restaurant</Button>
+        </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>

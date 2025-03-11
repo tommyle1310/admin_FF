@@ -23,7 +23,7 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { promotionsService } from "@/services/promotionsService";
+import { promotionsService } from "@/services/finance-admin/promotionsService";
 
 export type Promotion = {
   id: string;
