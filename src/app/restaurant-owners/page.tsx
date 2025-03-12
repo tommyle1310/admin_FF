@@ -59,13 +59,12 @@ export const columns: ColumnDef<Restaurant>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <Button
+      <p
         className="text-center"
-        variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Restaurant Name
-      </Button>
+      </p>
     ),
     cell: ({ row }) => (
       <div className="text-center">{row.getValue("name")}</div>
@@ -90,9 +89,9 @@ export const columns: ColumnDef<Restaurant>[] = [
   {
     accessorKey: "status",
     header: () => (
-      <Button className="text-center bg-slate-300" variant="ghost">
+      <p className="text-center">
         Status
-      </Button>
+      </p>
     ),
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
