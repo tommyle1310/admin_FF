@@ -177,14 +177,7 @@ export const columns: ColumnDef<Customer>[] = [
 const Page = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   useEffect(() => {
-    const result = customerService.getAllCustomers();
-    result
-      .then((res) => {
-        setCustomers(res.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    fetchCustomer();
   }, []);
   console.log(customers);
 
@@ -193,10 +186,31 @@ const Page = () => {
     columns,
     getCoreRowModel: getCoreRowModel(),
   });
+
+  const fetchCustomer = async () => {
+    const result = customerService.getAllCustomers();
+    result
+      .then((res) => {
+        setCustomers(res.data);
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+  };
+
+  const handleGenerateCustomer = async () => {
+    const result = await customerService.createCustomer();
+    if (result.EC === 0) {
+      fetchCustomer();
+    }
+  };
   return (
     <div className="p-4">
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">Customer List</h2>
+        <div className="justify-between flex items-center">
+          <h2 className="text-xl font-semibold mb-4">Customer List</h2>
+          <Button onClick={handleGenerateCustomer}>Generate Customer</Button>
+        </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
