@@ -23,14 +23,21 @@ import {
   getCoreRowModel,
   flexRender,
 } from "@tanstack/react-table";
-import { restaurantService } from "@/services/companion-admin/restaurantService";
+import {
+  Restaurant,
+  restaurantService,
+} from "@/services/companion-admin/restaurantService";
+import { Spinner } from "@/components/Spinner";
 
-interface Restaurant {
+interface ItemRestaurantBackend {
   id: string;
-  name: string;
-  owner: string;
-  status: string;
-  address: string;
+  restaurant_name: string;
+  status: { is_active?: boolean };
+  address: {
+    nationality: string;
+    city: string;
+    street: string;
+  };
 }
 
 export const columns: ColumnDef<Restaurant>[] = [
@@ -60,55 +67,67 @@ export const columns: ColumnDef<Restaurant>[] = [
     accessorKey: "name",
     header: ({ column }) => (
       <Button
-        className="text-center"
+        className="text-left pl-0"
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Restaurant Name
       </Button>
     ),
-    cell: ({ row }) => (
-      <div className="text-center">{row.getValue("name")}</div>
-    ),
+    cell: ({ row }) => <div className="text-left">{row.getValue("name")}</div>,
   },
   {
-    accessorKey: "owner",
+    accessorKey: "address",
     header: ({ column }) => (
       <Button
-        className="text-center"
+        className="text-center pl-0"
         variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Owner
+        Adress
         <ArrowUpDown className="ml-2 h-4 w-4" />
       </Button>
     ),
-    cell: ({ row }) => (
-      <div className="text-center">{row.getValue("owner")}</div>
-    ),
+    cell: ({ row }) => {
+      if (!row) {
+        return <div className="text-center">-</div>; // Fallback for undefined row
+      }
+
+      const address = row.getValue("address"); // Get the value
+      if (!address) {
+        return <div className="text-center">-</div>; // Fallback for undefined address
+      }
+
+      const addressStr = address.toString(); // Convert to string
+      return (
+        <div className="text-left">
+          {addressStr.length > 30
+            ? `${addressStr.slice(0, 30)}...`
+            : addressStr}
+        </div>
+      );
+    },
   },
   {
-    accessorKey: "status",
+    accessorKey: "isActive",
     header: () => (
-      <Button className="text-center bg-slate-300" variant="ghost">
+      <Button className="text-center" variant="ghost">
         Status
       </Button>
     ),
     cell: ({ row }) => {
-      const status = row.getValue("status") as string;
+      const isActive = row.getValue("isActive") as boolean;
       return (
         <div className="text-center">
           <span
             className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
             ${
-              status === "active"
+              isActive
                 ? "bg-green-100 text-green-800"
-                : status === "pending"
-                ? "bg-yellow-100 text-yellow-800"
                 : "bg-red-100 text-red-800"
             }`}
           >
-            {status}
+            {isActive ? "Active" : "Inactive"}
           </span>
         </div>
       );
@@ -146,7 +165,7 @@ export const columns: ColumnDef<Restaurant>[] = [
                 // onClick={() => handleStatusChange(restaurant.id, restaurant.status === 'active' ? 'inactive' : 'active')}
               >
                 <Power className="mr-2 h-4 w-4" />
-                {restaurant.status === "active" ? "Deactivate" : "Activate"}
+                {/* {restaurant.isActive === "active" ? "Deactivate" : "Activate"} */}
               </Button>
               <Button
                 variant="ghost"
@@ -166,6 +185,7 @@ export const columns: ColumnDef<Restaurant>[] = [
 
 const Page = () => {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -173,6 +193,7 @@ const Page = () => {
   });
 
   useEffect(() => {
+    setIsLoading(true);
     fetchRestaurants();
   }, []);
 
@@ -181,46 +202,41 @@ const Page = () => {
     result
       .then((res) => {
         setRestaurants(
-          res.data.map(
-            (item: {
-              _id: string;
-              restaurant_name: string;
-              owner_name: string;
-              status: { is_active: boolean };
-              address: string;
-            }) => ({
-              id: item._id,
-              name: item.restaurant_name,
-              owner: item.owner_name,
-              status: item.status.is_active ? "active" : "inactive",
-              address: item.address,
-            })
-          )
+          res.data.map((item: ItemRestaurantBackend) => ({
+            id: item.id,
+            name: item.restaurant_name,
+            address: `${item.address.street} ${item.address.city} ${item.address.nationality}`,
+            cuisine: "",
+            isActive: item.status.is_active,
+            rating: undefined,
+          }))
         );
       })
       .catch((err) => {
         console.log("check err", err);
         setRestaurants([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 
   useEffect(() => {
-    // Calculate stats based on the restaurants array
     const totalCount = restaurants.length;
-    const activeCount = restaurants.filter((r) => r.status === "active").length;
-    const bannedCount = restaurants.filter(
-      (r) => r.status === "inactive"
-    ).length;
+    const activeCount = restaurants.filter((r) => r.isActive).length;
+    const bannedCount = restaurants.filter((r) => !r.isActive).length;
 
     setStats({
       total: totalCount,
       active: activeCount,
       ban: bannedCount,
     });
-  }, [restaurants]); // Update stats whenever restaurants array changes
+  }, [restaurants]);
 
   const handleGenerateRestaurant = async () => {
+    setIsLoading(true)
     const result = await restaurantService.createRestaurant();
+    setIsLoading(false)
     if (result.EC === 0) {
       fetchRestaurants();
     }
@@ -234,6 +250,7 @@ const Page = () => {
 
   return (
     <div className="p-4">
+      <Spinner isVisible={isLoading} isOverlay />
       <h1 className="text-2xl font-bold mb-4">Restaurant Owners Dashboard</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -148,10 +148,49 @@ const Page = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const handleGenerateDriver = async () => {
+    const result = await driverService.createDriver();
+    if (result.EC === 0) {
+      fetchDrivers();
+    }
+  };
+  const fetchDrivers = async () => {
+    const result = driverService.getAllDrivers();
+    result
+      .then((res) => {
+        setDrivers(
+          res.data.map(
+            (item: {
+              _id: string;
+              restaurant_name: string;
+              owner_name: string;
+              status: { is_active: boolean };
+              address: string;
+            }) => ({
+              id: item._id,
+              name: item.restaurant_name,
+              owner: item.owner_name,
+              status: item.status.is_active ? "active" : "inactive",
+              address: item.address,
+            })
+          )
+        );
+      })
+      .catch((err) => {
+        console.log("check err", err);
+        setDrivers([]);
+      });
+  };
+
+
   return (
     <div className="p-4">
       <div className="mt-8">
+        <div className="justify-between flex items-center">
         <h2 className="text-xl font-semibold mb-4">Driver List</h2>
+        <Button onClick={handleGenerateDriver}>
+            Generate Driver
+          </Button></div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>

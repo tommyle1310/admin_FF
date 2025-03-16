@@ -14,8 +14,11 @@ const MainNav = () => {
 
   return (
     <div className="jb w-full gap-4 py-8">
-      <Link href={"/"} className="bg-white rounded-md aspect-[14/6] p-3">
-        LOGO
+      <Link href={"/"}>
+        <Avatar>
+          <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1738821741/ic45aqy23c7ynle7yemv.png" />
+          <AvatarFallback>CN</AvatarFallback>
+        </Avatar>
       </Link>
       <Input
         type="email"
@@ -73,7 +76,7 @@ const MainNav = () => {
             Hello, <span className="font-semibold">Admin</span>
           </h5>
           <Avatar>
-            <AvatarImage src="https://github.com/shadcn.png" />
+            <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1738811319/itrjvcocagj8irjbpnmd.jpg" />
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
         </div>

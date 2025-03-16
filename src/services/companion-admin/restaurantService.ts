@@ -2,7 +2,7 @@ import axiosInstance from '@/lib/axios';
 import { API_ENDPOINTS } from '@/lib/constants/api';
 
 // Define Restaurant interface
-interface Restaurant {
+export interface Restaurant {
     id: string;
     name: string;
     address: string;

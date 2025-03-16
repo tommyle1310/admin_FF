@@ -10,13 +10,12 @@ export const driverService = {
     return response.data;
   },
 
-  //   createCustomer: async (customer: Omit<Customer, "id">) => {
-  //     const response = await axiosInstance.post(
-  //       `finance-admin${API_ENDPOINTS.CUSTOMERS}`,
-  //       customer
-  //     );
-  //     return response.data;
-  //   },
+    createDriver: async () => {
+      const response = await axiosInstance.post(
+        `companion-admin${API_ENDPOINTS.DRIVERS}`
+      );
+      return response.data;
+    },
 
   // updatePromotion: async (id: string, promotion: Partial<Promotion>) => {
   //     const response = await axiosInstance.put(`${API_ENDPOINTS.PROMOTIONS}/${id}`, promotion);
