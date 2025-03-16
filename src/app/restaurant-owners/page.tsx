@@ -59,12 +59,13 @@ export const columns: ColumnDef<Restaurant>[] = [
   {
     accessorKey: "name",
     header: ({ column }) => (
-      <p
+      <Button
         className="text-center"
+        variant="ghost"
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
         Restaurant Name
-      </p>
+      </Button>
     ),
     cell: ({ row }) => (
       <div className="text-center">{row.getValue("name")}</div>
@@ -89,9 +90,9 @@ export const columns: ColumnDef<Restaurant>[] = [
   {
     accessorKey: "status",
     header: () => (
-      <p className="text-center">
+      <Button className="text-center bg-slate-300" variant="ghost">
         Status
-      </p>
+      </Button>
     ),
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
@@ -172,7 +173,7 @@ const Page = () => {
   });
 
   useEffect(() => {
-    fetchRestaurants()
+    fetchRestaurants();
   }, []);
 
   const fetchRestaurants = async () => {
@@ -201,7 +202,7 @@ const Page = () => {
         console.log("check err", err);
         setRestaurants([]);
       });
-  }
+  };
 
   useEffect(() => {
     // Calculate stats based on the restaurants array
@@ -220,8 +221,10 @@ const Page = () => {
 
   const handleGenerateRestaurant = async () => {
     const result = await restaurantService.createRestaurant();
-   fetchRestaurants()
-  }
+    if (result.EC === 0) {
+      fetchRestaurants();
+    }
+  };
 
   const table = useReactTable({
     data: restaurants,
@@ -255,7 +258,9 @@ const Page = () => {
       <div className="mt-8">
         <div className="justify-between flex items-center">
           <h2 className="text-xl font-semibold mb-4">Restaurant List</h2>
-          <Button onClick={handleGenerateRestaurant}>Generate Restaurant</Button>
+          <Button onClick={handleGenerateRestaurant}>
+            Generate Restaurant
+          </Button>
         </div>
         <div className="rounded-md border">
           <Table>

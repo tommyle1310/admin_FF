@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { GoBell, GoGift } from "react-icons/go";
@@ -15,13 +14,9 @@ const MainNav = () => {
 
   return (
     <div className="jb w-full gap-4 py-8">
-      <Link href={"/"}>
-        <Avatar>
-          <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/v1738821741/ic45aqy23c7ynle7yemv.png" />
-          <AvatarFallback>FLashFood</AvatarFallback>
-        </Avatar>
+      <Link href={"/"} className="bg-white rounded-md aspect-[14/6] p-3">
+        LOGO
       </Link>
-
       <Input
         type="email"
         placeholder="Search here..."
@@ -34,14 +29,18 @@ const MainNav = () => {
             <Badge
               className="absolute -top-1 -right-1 border-2 border-white text-[0.5rem] px-[0.14rem] py-[0.1rem] bg-info-500"
               variant="default"
-            ></Badge>
+            >
+              12
+            </Badge>
           </div>
           <div className="w-10 aspect-square rounded-xl relative cc bg-primary-100 shadow-md shadow-primary-300 hover-sd">
             <HiOutlineChatAlt className="text-primary-500" />
             <Badge
               className="absolute -top-1 -right-1 border-2 border-white text-[0.5rem] px-[0.14rem] py-[0.1rem] bg-primary-500"
               variant="default"
-            ></Badge>
+            >
+              12
+            </Badge>
           </div>
           <div
             onClick={() => router.push("/promotions")}
@@ -51,14 +50,18 @@ const MainNav = () => {
             <Badge
               className="absolute -top-1 -right-1 border-2 border-white text-[0.5rem] px-[0.14rem] py-[0.1rem] bg-success-700"
               variant="default"
-            ></Badge>
+            >
+              12
+            </Badge>
           </div>
           <div className="w-10 aspect-square rounded-xl relative cc bg-danger-100 shadow-md shadow-danger-300 hover-sd">
             <FiSettings className="text-danger-500" />
             <Badge
               className="absolute -top-1 -right-1 border-2 border-white text-[0.5rem] px-[0.14rem] py-[0.1rem] bg-danger-500"
               variant="default"
-            ></Badge>
+            >
+              12
+            </Badge>
           </div>
         </div>
         <Separator
@@ -70,7 +73,7 @@ const MainNav = () => {
             Hello, <span className="font-semibold">Admin</span>
           </h5>
           <Avatar>
-            <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/v1738811319/itrjvcocagj8irjbpnmd.jpg" />
+            <AvatarImage src="https://github.com/shadcn.png" />
             <AvatarFallback>CN</AvatarFallback>
           </Avatar>
         </div>

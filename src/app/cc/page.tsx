@@ -177,6 +177,10 @@ const Page = () => {
   const [customerCare, setCustomerCare] = useState<CustomerCare[]>([]);
 
   useEffect(() => {
+    fetchCustomerCare();
+  }, []);
+
+  const fetchCustomerCare = async () => {
     const result = customerCareService.getAllCustomerCareRepresentatives();
     result
       .then((res) => {
@@ -184,8 +188,9 @@ const Page = () => {
       })
       .catch((err) => {
         console.log(err);
+        setCustomerCare([]);
       });
-  }, []);
+  };
 
   const table = useReactTable({
     data: customerCare,
@@ -193,12 +198,24 @@ const Page = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const handleGenerateCustomerCare = async () => {
+    const result = await customerCareService.createCustomerCareRepresentative();
+    if (result.EC === 0) {
+      fetchCustomerCare();
+    }
+  };
+
   return (
     <div className="p-4">
       <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4">
-          Customer Care Representatives
-        </h2>
+        <div className="justify-between flex items-center">
+          <h2 className="text-xl font-semibold mb-4">
+            Customer Care Representatives
+          </h2>
+          <Button onClick={handleGenerateCustomerCare}>
+            Generate Customer Care Representative
+          </Button>
+        </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
