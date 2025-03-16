@@ -9,7 +9,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { driverService } from "@/services/companion-admin/driverService";
+import {
+  Driver,
+  driverService,
+} from "@/services/companion-admin/driverService";
 import {
   ColumnDef,
   flexRender,
@@ -18,29 +21,8 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import Image from "next/image";
+import { type } from "os";
 import React, { useEffect, useState } from "react";
-
-interface Driver {
-  id: string;
-  first_name: string;
-  active_points: number;
-  last_name: string;
-  rating: { review_count: number; average_rating: number };
-  avatar: {
-    url: string;
-    key: string;
-  };
-  vehicle: {
-    color: string;
-    model: string;
-    license_plate: string;
-  };
-  available_for_work: boolean;
-  address: string;
-  contact_email: {
-    email: string;
-  }[];
-}
 
 export const columns: ColumnDef<Driver>[] = [
   {
@@ -161,17 +143,47 @@ const Page = () => {
         setDrivers(
           res.data.map(
             (item: {
-              _id: string;
-              restaurant_name: string;
-              owner_name: string;
-              status: { is_active: boolean };
-              address: string;
+              id: string;
+              first_name: string;
+              last_name: string;
+              rating: {
+                review_count: number,
+                average_rating: number
+            },
+              contact_email: {
+                email: string;
+              }[];
+              avatar: {
+                url: string;
+                key: string;
+              } | null;
+              vehicle: {
+                color: string;
+                model: string;
+                license_plate: string;
+              };
+              available_for_work: boolean;
+              active_points: 0;
             }) => ({
-              id: item._id,
-              name: item.restaurant_name,
-              owner: item.owner_name,
-              status: item.status.is_active ? "active" : "inactive",
-              address: item.address,
+              id: item.id,
+              first_name: item.first_name,
+              active_points: item.active_points,
+              last_name: item.last_name,
+              rating: { review_count: item.rating.review_count, average_rating: item.rating.average_rating },
+              avatar: {
+                url: item.avatar?.url,
+                key: item.avatar?.key
+              },
+              vehicle: {
+                color: item.vehicle.color,
+                model: item.vehicle.model,
+                license_plate: item.vehicle.license_plate,
+              },
+              available_for_work: item.available_for_work,
+              address: 'chua co',
+              contact_email: {
+                email : item?.contact_email?.[0]?.email
+              }
             })
           )
         );
@@ -182,15 +194,13 @@ const Page = () => {
       });
   };
 
-
   return (
     <div className="p-4">
       <div className="mt-8">
         <div className="justify-between flex items-center">
-        <h2 className="text-xl font-semibold mb-4">Driver List</h2>
-        <Button onClick={handleGenerateDriver}>
-            Generate Driver
-          </Button></div>
+          <h2 className="text-xl font-semibold mb-4">Driver List</h2>
+          <Button onClick={handleGenerateDriver}>Generate Driver</Button>
+        </div>
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -231,3 +241,4 @@ const Page = () => {
 };
 
 export default Page;
+

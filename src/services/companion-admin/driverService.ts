@@ -2,6 +2,27 @@ import axiosInstance from "@/lib/axios";
 import { API_ENDPOINTS } from "@/lib/constants/api";
 // import { Customer } from "@/app/customers/page";
 
+export interface Driver {
+  id: string;
+  first_name: string;
+  active_points: number;
+  last_name: string;
+  rating: { review_count: number; average_rating: number };
+  avatar: {
+    url: string;
+    key: string;
+  };
+  vehicle: {
+    color: string;
+    model: string;
+    license_plate: string;
+  };
+  available_for_work: boolean;
+  address: string;
+  contact_email: {
+    email: string;
+  }[];
+}
 export const driverService = {
   getAllDrivers: async () => {
     const response = await axiosInstance.get(
