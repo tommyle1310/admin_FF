@@ -1,34 +1,84 @@
 import axiosInstance from "@/lib/axios";
 import { API_ENDPOINTS } from "@/lib/constants/api";
-// import { Customer } from "@/app/customers/page";
+
+export interface CustomerCare {
+  id: string;
+  first_name: string;
+  last_name: string;
+  active_points: number;
+  avatar: {
+    url: string;
+    key: string;
+  };
+  is_assigned: boolean;
+  available_for_work: boolean;
+  address: string;
+  contact_email: {
+    email: string;
+  }[];
+}
 
 export const customerCareService = {
   getAllCustomerCareRepresentatives: async () => {
-    const response = await axiosInstance.get(
-      `companion-admin${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}`
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get(
+        `companion-admin${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}`
+      );
+      console.log("API Response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching customer care representatives:", error.message);
+      return { data: [] };
+    }
   },
 
   createCustomerCareRepresentative: async () => {
-    const response = await axiosInstance.post(
-      `companion-admin${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}`
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.post(
+        `/companion-admin${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}`
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error creating customer care representative:", error.message);
+      return { EC: 1, data: null };
+    }
   },
 
-  // updatePromotion: async (id: string, promotion: Partial<Promotion>) => {
-  //     const response = await axiosInstance.put(`${API_ENDPOINTS.PROMOTIONS}/${id}`, promotion);
-  //     return response.data;
-  // },
+  updateCustomerCareRepresentative: async (id: string, customerCare: Partial<CustomerCare>) => {
+    try {
+      const response = await axiosInstance.put(
+        `${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}/${id}`,
+        customerCare
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error updating customer care representative:", error.message);
+      return null;
+    }
+  },
 
-  // deletePromotion: async (id: string) => {
-  //     const response = await axiosInstance.delete(`${API_ENDPOINTS.PROMOTIONS}/${id}`);
-  //     return response.data;
-  // },
+  deleteCustomerCareRepresentative: async (id: string) => {
+    try {
+      const response = await axiosInstance.delete(
+        `${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}/${id}`
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error deleting customer care representative:", error.message);
+      return null;
+    }
+  },
 
-  // togglePromotionStatus: async (id: string, status: 'active' | 'inactive') => {
-  //     const response = await axiosInstance.patch(`${API_ENDPOINTS.PROMOTIONS}/${id}/status`, { status });
-  //     return response.data;
-  // }
+  toggleCustomerCareStatus: async (id: string, available_for_work: boolean) => {
+    try {
+      const response = await axiosInstance.patch(
+        `${API_ENDPOINTS.CUSTOMER_CARE_REPRESENTATIVES}/${id}/status`,
+        { available_for_work }
+      );
+      return response.data;
+    } catch (error: any) {
+      console.error("Error toggling customer care status:", error.message);
+      return null;
+    }
+  }
 };

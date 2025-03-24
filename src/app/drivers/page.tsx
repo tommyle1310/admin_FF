@@ -164,59 +164,40 @@ const Page = () => {
     const result = driverService.getAllDrivers();
     result
       .then((res) => {
-        const a = [];
-        res.data.map    
-        setDrivers(
-          res.data.map(
-            (item: {
-              id: string;
-              first_name: string;
-              last_name: string;
-              rating: {
-                review_count: number,
-                average_rating: number
-            },
-              contact_email: {
-                email: string;
-              }[];
-              avatar: {
-                url: string;
-                key: string;
-              } | null;
-              vehicle: {
-                color: string;
-                model: string;
-                license_plate: string;
-              };
-              available_for_work: boolean;
-              active_points: 0;
-            }) => ({
-              id: item.id,
-              first_name: item.first_name,
-              active_points: item.active_points,
-              last_name: item.last_name,
-              rating: { review_count: item.rating.review_count, average_rating: item.rating.average_rating },
-              avatar: {
-                url: item.avatar?.url,
-                key: item.avatar?.key
-              },
-              vehicle: {
-                color: item.vehicle.color,
-                model: item.vehicle.model,
-                license_plate: item.vehicle.license_plate,
-              },
-              available_for_work: item.available_for_work,
-              address: '',
-              contact_email: {
-                email : item?.contact_email?.[0]?.email?? 'tao dang bi loi'
-              }
-            })
-          )
-        );
+        const responseData = res.data;
+        const buildData = responseData.map((item: Driver ) => ({
+          id: item.id,
+          first_name: item.first_name,
+          active_points: item.active_points,
+          last_name: item.last_name,
+          rating: { 
+            review_count: item.rating.review_count, 
+            average_rating: item.rating.average_rating 
+          },
+          avatar: {
+            url: item.avatar?.url,
+            key: item.avatar?.key
+          },
+          vehicle: {
+            color: item.vehicle.color,
+            model: item.vehicle.model,
+            license_plate: item.vehicle.license_plate,
+          },
+          available_for_work: item.available_for_work,
+          address: '',
+          contact_email: [{
+            email: item?.contact_email?.[0]?.email ?? ''
+          }]
+        }))
+        const {EC, EM, data} = res.data
+        setDrivers(buildData);
       })
       .catch((err) => {
         console.log("check err", err);
         setDrivers([]);
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   };
 

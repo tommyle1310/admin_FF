@@ -201,16 +201,17 @@ const Page = () => {
     const result = restaurantService.getAllRestaurants();
     result
       .then((res) => {
-        setRestaurants(
-          res.data.map((item: ItemRestaurantBackend) => ({
-            id: item.id,
-            name: item.restaurant_name,
-            address: `${item.address.street} ${item.address.city} ${item.address.nationality}`,
-            cuisine: "",
-            isActive: item.status.is_active,
-            rating: undefined,
-          }))
-        );
+        const responseData = res.data
+        const buildData =  responseData.map((item: ItemRestaurantBackend) => ({
+          id: item.id,
+          name: item.restaurant_name,
+          address: `${item.address.street} ${item.address.city} ${item.address.nationality}`,
+          cuisine: "",
+          isActive: item.status.is_active,
+          rating: undefined,
+        }))
+        const{EC, EM, data} =res.data
+        setRestaurants(buildData);
       })
       .catch((err) => {
         console.log("check err", err);

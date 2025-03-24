@@ -24,6 +24,7 @@ import {
 import { ArrowUpDown, Eye, MoreHorizontal, Power, Trash } from "lucide-react";
 import Image from "next/image";
 import React, { useEffect, useState } from "react";
+import { Spinner } from "@/components/Spinner";
 
 interface CustomerCare {
   id: string;
@@ -130,8 +131,8 @@ export const columns: ColumnDef<CustomerCare>[] = [
     id: "actions",
     enableHiding: false,
     header: "Actions",
-    cell: () => {
-      //   const cc = row.original;
+    cell: ({ row }) => {
+      const cc = row.original;
       return (
         <Popover>
           <PopoverTrigger asChild>
@@ -175,21 +176,71 @@ export const columns: ColumnDef<CustomerCare>[] = [
 
 const Page = () => {
   const [customerCare, setCustomerCare] = useState<CustomerCare[]>([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    banned: 0,
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     fetchCustomerCare();
   }, []);
 
   const fetchCustomerCare = async () => {
-    const result = customerCareService.getAllCustomerCareRepresentatives();
-    result
-      .then((res) => {
-        setCustomerCare(res.data);
-      })
-      .catch((err) => {
-        console.log(err);
-        setCustomerCare([]);
+    setIsLoading(true);
+    try {
+      const result = await customerCareService.getAllCustomerCareRepresentatives();
+      console.log("Result from API:", result);
+      
+      // Handle both array and object with data property
+      const careData = Array.isArray(result) ? result : 
+                      (result && result.data ? result.data : []);
+      
+      console.log("Processed data:", careData);
+      setCustomerCare(careData);
+  
+      // Calculate statistics
+      const totalCount = careData.length;
+      const activeCount = careData.filter((cc: {available_for_work: boolean}) => cc.available_for_work).length;
+      const bannedCount = careData.filter((cc: {available_for_work: boolean}) => !cc.available_for_work).length;
+  
+      setStats({
+        total: totalCount,
+        active: activeCount,
+        banned: bannedCount,
       });
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setCustomerCare([]);
+      setStats({
+        total: 0,
+        active: 0,
+        banned: 0,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateCustomerCare = async () => {
+    setIsLoading(true); 
+    try {
+      const result = await customerCareService.createCustomerCareRepresentative();
+      console.log("Generate result:", result); 
+      
+      if (result && result.EC === 0) {
+        await fetchCustomerCare();
+      } else {
+        console.error("Failed to generate customer care rep:", result);
+   
+      }
+    } catch (error) {
+      console.error("Error generating customer care rep:", error);
+ 
+    } finally {
+      setIsLoading(false); 
+    }
   };
 
   const table = useReactTable({
@@ -198,15 +249,28 @@ const Page = () => {
     getCoreRowModel: getCoreRowModel(),
   });
 
-  const handleGenerateCustomerCare = async () => {
-    const result = await customerCareService.createCustomerCareRepresentative();
-    if (result.EC === 0) {
-      fetchCustomerCare();
-    }
-  };
-
   return (
     <div className="p-4">
+       {isLoading && <Spinner isVisible={isLoading} isOverlay />}
+      <h1 className="text-2xl font-bold mb-4">Customer Care Dashboard</h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Total Representatives</h2>
+          <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Active Representatives</h2>
+          <div className="text-3xl font-bold text-green-600">{stats.active}</div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow">
+          <h2 className="text-lg font-semibold mb-2">Banned Representatives</h2>
+          <div className="text-3xl font-bold text-red-600">{stats.banned}</div>
+        </div>
+      </div>
+
       <div className="mt-8">
         <div className="justify-between flex items-center">
           <h2 className="text-xl font-semibold mb-4">
