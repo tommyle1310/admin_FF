@@ -8,10 +8,28 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import AuthDialogContent from "../AuthDialogContent";
+import { useState } from "react";
 
 const MainNav = () => {
   const router = useRouter();
-
+  const [open, setOpen] = useState(false);
   return (
     <div className="jb w-full gap-4 py-8">
       <Link href={"/"}>
@@ -75,10 +93,24 @@ const MainNav = () => {
           <h5 className="max-md:hidden">
             Hello, <span className="font-semibold">Admin</span>
           </h5>
-          <Avatar>
-            <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1738811319/itrjvcocagj8irjbpnmd.jpg" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Avatar>
+                <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1738811319/itrjvcocagj8irjbpnmd.jpg" />
+                <AvatarFallback>CN</AvatarFallback>
+              </Avatar>
+            </PopoverTrigger>
+            <PopoverContent className="">
+              <Dialog open={open} onOpenChange={setOpen}>
+                <DialogTrigger asChild>
+                  <Button variant={"ghost"} className="text-red-300">
+                    Logout
+                  </Button>
+                </DialogTrigger>
+                <AuthDialogContent onClose={() => setOpen(false)} />
+              </Dialog>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
     </div>

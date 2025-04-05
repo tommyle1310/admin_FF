@@ -21,8 +21,6 @@ export const metadata: Metadata = {
 import MainNav from "@/components/Nav/MainNav";
 import SideBar from "@/components/Nav/SideBar";
 
-
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -31,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-tr from-indigo-200 to-green-200`}
       >
         <div className="background max-w-screen-lg my-6 rounded-lg overflow-hidden shadow-md mx-auto min-h-screen">
           <div className="grid grid-cols-12">

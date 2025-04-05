@@ -86,12 +86,17 @@ const Page = () => {
 
   const handleStatusChange = async (customerId: string, newStatus: boolean) => {
     setIsLoading(true);
-    const result = await customerService.updateCustomerStatus(customerId, newStatus);
+    const result = await customerService.updateCustomerStatus(
+      customerId,
+      newStatus
+    );
     setIsLoading(false);
     if (result && result.EC === 0) {
       setCustomers((prevCustomers) =>
         prevCustomers.map((customer) =>
-          customer.id === customerId ? { ...customer, isActive: newStatus } : customer
+          customer.id === customerId
+            ? { ...customer, isActive: newStatus }
+            : customer
         )
       );
     }
@@ -137,13 +142,13 @@ const Page = () => {
         return (
           <div className="flex flex-row items-center gap-2">
             <Image
-              src={customer.avatar.url}
+              src={customer?.avatar?.url}
               alt="avatar"
               width={32}
               height={32}
               className="h-8 w-8 rounded-full"
             />
-            <span>{customer.user.email}</span>
+            <span>{customer?.user?.email}</span>
           </div>
         );
       },
@@ -227,7 +232,9 @@ const Page = () => {
                 <Button
                   variant="ghost"
                   className="flex items-center justify-start"
-                  onClick={() => handleStatusChange(customer.id, !customer.isActive)}
+                  onClick={() =>
+                    handleStatusChange(customer.id, !customer.isActive)
+                  }
                 >
                   <Power className="mr-2 h-4 w-4" />
                   {customer.isActive ? "Deactivate" : "Activate"}
@@ -267,7 +274,9 @@ const Page = () => {
 
         <div className="bg-white p-4 rounded-lg shadow">
           <h2 className="text-lg font-semibold mb-2">Active Customers</h2>
-          <div className="text-3xl font-bold text-green-600">{stats.active}</div>
+          <div className="text-3xl font-bold text-green-600">
+            {stats.active}
+          </div>
         </div>
 
         <div className="bg-white p-4 rounded-lg shadow">

@@ -13,7 +13,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const styleSelectedItem =
-  "bg-primary-100 relative after:absolute after:left-0 after:w-1 px-3 py-1 rounded-l-sm overflow-hidden after:top-0 after:h-full after:bg-primary-500 pl-4";
+  "bg-primary-200 relative after:absolute after:left-0 after:w-1 px-3 py-1 rounded-l-sm overflow-hidden after:top-0 after:h-full after:bg-primary-500 pl-4";
 const styleHoverItem =
   "p-2 text-sm font-semibold hover:duration-200 hover:text-info-600 cursor-pointer hover:bg-info-100";
 
