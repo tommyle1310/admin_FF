@@ -26,10 +26,26 @@ import { Button } from "../ui/button";
 import { Label } from "../ui/label";
 import AuthDialogContent from "../AuthDialogContent";
 import { useState } from "react";
+import { IMAGE_LINKS } from "@/assets/imageLinks";
+import { useAdminStore } from "@/stores/adminStore";
+import { useCustomerCareStore } from "@/stores/customerCareStore";
 
 const MainNav = () => {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const logout = useAdminStore((state) => state.logout);
+
+  const adminZ = useAdminStore((state) => state.user);
+  const customerCareZ = useCustomerCareStore((state) => state.user);
+  const userAvatar =
+    adminZ?.avatar?.url ||
+    customerCareZ?.avatar?.url ||
+    IMAGE_LINKS.DEFAULT_AVATAR;
+  const userFullName =
+    `${adminZ?.last_name} ${adminZ?.first_name}` ||
+    `${customerCareZ?.last_name} ${customerCareZ?.first_name}` ||
+    IMAGE_LINKS.DEFAULT_AVATAR;
   return (
     <div className="jb w-full gap-4 py-8">
       <Link href={"/"}>
@@ -91,19 +107,23 @@ const MainNav = () => {
         />
         <div className="jb gap-2">
           <h5 className="max-md:hidden">
-            Hello, <span className="font-semibold">Admin</span>
+            Hello, <span className="font-semibold">{userFullName}</span>
           </h5>
           <Popover>
             <PopoverTrigger asChild>
               <Avatar>
-                <AvatarImage src="https://res.cloudinary.com/dpubnzap3/image/upload/w_1000,c_fill,ar_1:1,g_auto,r_max,bo_5px_solid_red,b_rgb:262c35/v1738811319/itrjvcocagj8irjbpnmd.jpg" />
+                <AvatarImage src={userAvatar} />
                 <AvatarFallback>CN</AvatarFallback>
               </Avatar>
             </PopoverTrigger>
             <PopoverContent className="">
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
-                  <Button variant={"ghost"} className="text-red-300">
+                  <Button
+                    onClick={() => logout()}
+                    variant={"ghost"}
+                    className="text-red-300"
+                  >
                     Logout
                   </Button>
                 </DialogTrigger>

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import {
   DialogContent,
   DialogHeader,
@@ -10,48 +11,106 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import axiosInstance from "@/lib/axios";
+import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation"; // Thêm useRouter
+
+import { jwtDecode } from "jwt-decode";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { AdminUser, useAdminStore } from "@/stores/adminStore";
+import {
+  CustomerCareUser,
+  useCustomerCareStore,
+} from "@/stores/customerCareStore";
 
 interface AuthDialogContentProps {
   onClose: () => void; // Prop để đóng dialog
 }
 
 const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
+  const pathname = usePathname();
+  const router = useRouter(); // Khởi tạo router
+
   const [isLogin, setIsLogin] = useState(true); // State để switch giữa Login và Signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [error, setError] = useState<string | null>(null); // State để hiển thị lỗi
+  const [userType, setUserType] = useState<string>(""); // State để lưu giá trị từ Select
+  const setAdminUser = useAdminStore((state) => state.setUser); // Từ admin store
+  const setCustomerCareUser = useCustomerCareStore((state) => state.setUser); // Từ customer care store
 
   const handleLogin = async () => {
-    // Reset error trước khi gọi API
     setError(null);
 
-    // Validate input
     if (!email || !password) {
       setError("Email and Password cannot be empty");
       return;
     }
+    if (!userType) {
+      setError("Please select a user type");
+      return;
+    }
+
+    let endpoint = "";
+    switch (userType) {
+      case "SUPER_ADMIN":
+        endpoint = "/auth/login-super-admin";
+        break;
+      case "COMPANION_ADMIN":
+        endpoint = "/auth/login-companion-admin";
+        break;
+      case "FINANCE_ADMIN":
+        endpoint = "/auth/login-finance-admin";
+        break;
+      case "CUSTOMER_CARE":
+        endpoint = "/auth/login-customer-care";
+        break;
+      default:
+        setError("Invalid user type selected");
+        return;
+    }
 
     try {
       const response = await axiosInstance.post(
-        "/auth/login-super-admin",
+        endpoint,
         {
           email,
           password,
-          type: "SUPER_ADMIN",
+          type: userType,
         },
         {
-          validateStatus: () => true, // Không để axios tự động throw error dựa trên HTTP status
+          validateStatus: () => true,
         }
       );
 
-      // Kiểm tra response từ API
       if (response.data.EC === 0) {
         console.log("Login successful:", response.data);
-        // Lưu token vào localStorage
-        localStorage.setItem("access_token", response.data.data.access_token);
-        // Đóng dialog
+
+        const accessToken = response.data.data.access_token;
+        localStorage.setItem("access_token", accessToken);
+
+        // Decode JWT
+        const decodedToken = jwtDecode<any>(accessToken);
+
+        // Kiểm tra vai trò và set vào store tương ứng
+        if (decodedToken.logged_in_as === "CUSTOMER_CARE_REPRESENTATIVE") {
+          const customerCareUser = decodedToken as CustomerCareUser;
+          setCustomerCareUser(customerCareUser);
+        } else {
+          const adminUser = decodedToken as AdminUser;
+          setAdminUser(adminUser);
+        }
+
+        router.push("/");
         onClose();
       } else {
         setError(response.data.message || "Login failed");
@@ -71,19 +130,43 @@ const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
       setError("All fields are required for signup");
       return;
     }
+    if (!userType) {
+      setError("Please select a user type");
+      return;
+    }
+
+    // Xác định endpoint dựa trên userType
+    let endpoint = "";
+    switch (userType) {
+      case "SUPER_ADMIN":
+        endpoint = "/auth/register-super-admin";
+        break;
+      case "COMPANION_ADMIN":
+        endpoint = "/auth/register-companion-admin";
+        break;
+      case "FINANCE_ADMIN":
+        endpoint = "/auth/register-finance-admin";
+        break;
+      case "CUSTOMER_CARE":
+        endpoint = "/auth/register-customer-care";
+        break;
+      default:
+        setError("Invalid user type selected");
+        return;
+    }
 
     try {
       const response = await axiosInstance.post(
-        "/auth/register-super-admin",
+        endpoint,
         {
           email,
           password,
           first_name: firstName,
           last_name: lastName,
-          type: "SUPER_ADMIN",
+          type: userType,
         },
         {
-          validateStatus: () => true, // Không để axios tự động throw error dựa trên HTTP status
+          validateStatus: () => true,
         }
       );
 
@@ -96,6 +179,7 @@ const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
         setPassword("");
         setFirstName("");
         setLastName("");
+        setUserType(""); // Reset userType
         // Đóng dialog
         onClose();
       } else {
@@ -214,8 +298,24 @@ const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
             </span>
           </p>
 
-          {/* Footer: Nút Submit và Switch Link */}
-          <DialogFooter className="w-full flex flex-col">
+          {/* Footer: Select và Nút Submit */}
+          <DialogFooter className="w-full flex flex-col gap-4">
+            <Select onValueChange={(value) => setUserType(value)}>
+              <SelectTrigger className="">
+                <SelectValue placeholder="Login as" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>User type:</SelectLabel>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                  <SelectItem value="COMPANION_ADMIN">
+                    Companion Admin
+                  </SelectItem>
+                  <SelectItem value="FINANCE_ADMIN">Finance Admin</SelectItem>
+                  <SelectItem value="CUSTOMER_CARE">Customer Care</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
             <Button
               onClick={isLogin ? handleLogin : handleSignup}
               type="submit"

@@ -1,6 +1,7 @@
 "use client";
-import Link from "next/link";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,9 +9,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { sideBarItems } from "@/utils/appData";
+import { sideBarItems, type sideBarItem } from "@/utils/appData";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAdminStore } from "@/stores/adminStore";
+import { useCustomerCareStore } from "@/stores/customerCareStore";
 
 const styleSelectedItem =
   "bg-primary-200 relative after:absolute after:left-0 after:w-1 px-3 py-1 rounded-l-sm overflow-hidden after:top-0 after:h-full after:bg-primary-500 pl-4";
@@ -19,13 +22,97 @@ const styleHoverItem =
 
 const SideBar = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const [selectedDropdownMenuTitle, setSelectedDropdownMenuTitle] =
     useState("");
-  //   console.log("selectedDropdownMenuTitle", selectedDropdownMenuTitle);
+  const adminLoggedInAs = useAdminStore((state) => state.user?.logged_in_as);
+  const customerCareLoggedInAs = useCustomerCareStore(
+    (state) => state.user?.logged_in_as
+  );
+  const loggedInAs = adminLoggedInAs || customerCareLoggedInAs; // Lấy từ store nào có giá trị
+
+  // Hàm lọc sidebar items dựa trên vai trò
+  const getFilteredSideBarItems = (): sideBarItem[] => {
+    if (!loggedInAs) return [];
+
+    switch (loggedInAs) {
+      case "SUPER_ADMIN":
+        return sideBarItems;
+      case "COMPANION_ADMIN":
+        return sideBarItems.filter((item) => item.title !== "App Managers");
+      case "FINANCE_ADMIN": {
+        const filteredItems = sideBarItems.filter(
+          (item) =>
+            item.title !== "Drivers Statistics" &&
+            item.title !== "Restaurant Owner Statistics" &&
+            item.title !== "Customers Statistics" &&
+            item.title !== "Customer Care Team"
+        );
+        const appManagerItems =
+          sideBarItems
+            .find((item) => item.title === "App Managers")
+            ?.dropdownItem?.map((subItem) => ({
+              title: subItem.title,
+              link: subItem.link,
+            })) || [];
+        return [
+          ...filteredItems.filter((item) => item.title !== "App Managers"),
+          ...appManagerItems,
+        ];
+      }
+      case "CUSTOMER_CARE_REPRESENTATIVE":
+        return sideBarItems.filter((item) => item.title === "Dashboard");
+      default:
+        return [];
+    }
+  };
+
+  const filteredSideBarItems = getFilteredSideBarItems();
+
+  // Hàm lấy tất cả các route hợp lệ
+  const getValidRoutes = (): string[] => {
+    const routes: string[] = [];
+    filteredSideBarItems.forEach((item) => {
+      if (item.link) routes.push(item.link);
+      if (item.dropdownItem) {
+        item.dropdownItem.forEach((subItem) => {
+          if (subItem.link) routes.push(subItem.link);
+        });
+      }
+    });
+    return routes;
+  };
+
+  const validRoutes = getValidRoutes();
+
+  // Gộp logic kiểm tra quyền và chuyển hướng
+  useEffect(() => {
+    if (!loggedInAs) {
+      // Nếu chưa đăng nhập, chuyển về login thay vì not-found
+      if (pathname !== "/login") {
+        router.push("/");
+      }
+      return;
+    }
+
+    // Nếu đã đăng nhập nhưng truy cập route không hợp lệ
+    if (!validRoutes.includes(pathname)) {
+      router.push("/not-found");
+      return;
+    }
+
+    // Nếu đang ở /not-found nhưng có quyền truy cập trang khác, chuyển về Dashboard
+    if (pathname === "/not-found" && validRoutes.length > 0) {
+      router.push(validRoutes[0] || "/"); // Chuyển về route hợp lệ đầu tiên (thường là Dashboard)
+    }
+  }, [pathname, loggedInAs, validRoutes, router]);
+
+  console.log("check pathname", pathname);
+
   return (
-    <div className=" min-h-screen bg-white fc py-4 pl-4 col-span-2">
-      {sideBarItems.map((item, i) => {
-        if (!item.dropdownItem)
+    <div className="min-h-screen bg-white fc py-4 pl-4 col-span-2">
+      {filteredSideBarItems.map((item, i) => {
+        if (!item.dropdownItem) {
           return (
             <Link
               href={item.link as string}
@@ -37,33 +124,33 @@ const SideBar = () => {
               {item.title}
             </Link>
           );
+        }
+
         return (
           <div
             key={i}
             className={
               item.dropdownItem &&
-              item.dropdownItem.some((item) => {
-                return item.link === pathname;
-              })
+              item.dropdownItem.some((subItem) => subItem.link === pathname)
                 ? styleSelectedItem
                 : styleHoverItem
             }
           >
             <DropdownMenu>
-              <DropdownMenuTrigger className="p-0  ring-0 outline-none text-start">
+              <DropdownMenuTrigger className="p-0 ring-0 outline-none text-start">
                 {item.title}
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuSeparator />
-                {item.dropdownItem?.map((item, i) => (
-                  <DropdownMenuItem key={i}>
+                {item.dropdownItem?.map((subItem, j) => (
+                  <DropdownMenuItem key={j}>
                     <Link
                       onClick={() =>
-                        setSelectedDropdownMenuTitle(item.title as string)
+                        setSelectedDropdownMenuTitle(subItem.title as string)
                       }
-                      href={item.link as string}
+                      href={subItem.link as string}
                     >
-                      {item.title}
+                      {subItem.title}
                     </Link>
                   </DropdownMenuItem>
                 ))}
