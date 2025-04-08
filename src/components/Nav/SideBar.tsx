@@ -61,7 +61,10 @@ const SideBar = () => {
         ];
       }
       case "CUSTOMER_CARE_REPRESENTATIVE":
-        return sideBarItems.filter((item) => item.title === "Dashboard");
+        return [
+          ...sideBarItems.filter((item) => item.title === "Dashboard"),
+          { title: "Chats", link: "/chats" },
+        ];
       default:
         return [];
     }

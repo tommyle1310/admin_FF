@@ -42,10 +42,9 @@ const MainNav = () => {
     adminZ?.avatar?.url ||
     customerCareZ?.avatar?.url ||
     IMAGE_LINKS.DEFAULT_AVATAR;
-  const userFullName =
-    `${adminZ?.last_name} ${adminZ?.first_name}` ||
-    `${customerCareZ?.last_name} ${customerCareZ?.first_name}` ||
-    IMAGE_LINKS.DEFAULT_AVATAR;
+  const userFullName = adminZ
+    ? `${adminZ.last_name} ${adminZ.first_name}`
+    : `${customerCareZ?.last_name} ${customerCareZ?.first_name}`;
   return (
     <div className="jb w-full gap-4 py-8">
       <Link href={"/"}>
