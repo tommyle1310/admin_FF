@@ -92,17 +92,17 @@ const SideBar = () => {
   useEffect(() => {
     if (!loggedInAs) {
       // Nếu chưa đăng nhập, chuyển về login thay vì not-found
-      if (pathname !== "/login") {
-        router.push("/");
-      }
+      // if (pathname !== "/login") {
+      //   router.push("/");
+      // }
       return;
     }
 
     // Nếu đã đăng nhập nhưng truy cập route không hợp lệ
-    if (!validRoutes.includes(pathname)) {
-      router.push("/not-found");
-      return;
-    }
+    // if (!validRoutes.includes(pathname)) {
+    //   router.push("/not-found");
+    //   return;
+    // }
 
     // Nếu đang ở /not-found nhưng có quyền truy cập trang khác, chuyển về Dashboard
     if (pathname === "/not-found" && validRoutes.length > 0) {
