@@ -49,7 +49,7 @@ interface Avatar {
 }
 
 interface TargetContent {
-  avatar: Avatar;
+  avatar?: Avatar;
   title: string;
   desc: string;
   image?: Avatar; // Thay đổi từ string sang Avatar để đồng nhất với upload
@@ -121,7 +121,7 @@ const page = () => {
       created_by_id: adminZ?.id || "",
       content: {
         customer: {
-          avatar: { url: "", key: "" },
+          // avatar: { url: "", key: "" },
           title: "",
           desc: "",
           image: { url: "", key: "" }, // Khởi tạo image như Avatar
@@ -158,18 +158,48 @@ const page = () => {
     }
   };
 
-  // Handle submit broadcast notification
   const handleSaveAdd = async () => {
     if (!newBroadcast) return;
+
     try {
+      // Tạo bản sao của newBroadcast
+      let updatedBroadcast = { ...newBroadcast };
+
+      // Lọc content để chỉ giữ lại các role trong target_user
+      const filteredContent: typeof updatedBroadcast.content = {};
+      updatedBroadcast.target_user.forEach((target) => {
+        const roleKey =
+          target.toLowerCase() as keyof typeof newBroadcast.content;
+        const roleContent = newBroadcast.content[roleKey];
+
+        if (roleContent) {
+          // Nếu image.url rỗng hoặc không tồn tại, set image thành undefined
+          const updatedRoleContent = {
+            ...roleContent,
+            image: roleContent.image?.url ? roleContent.image : undefined,
+            title: roleContent.title || "",
+            desc: roleContent.desc || "",
+            link: roleContent.link || "",
+          };
+          filteredContent[roleKey] = updatedRoleContent;
+        }
+      });
+
+      // Cập nhật updatedBroadcast chỉ với content đã lọc
+      updatedBroadcast.content = filteredContent;
+
+      // Gửi request với updatedBroadcast
+      console.log("Request body:", JSON.stringify(updatedBroadcast, null, 2));
       const response = await axiosInstance.post(
         "/notifications/broadcast",
-        newBroadcast
+        updatedBroadcast
       );
       const { EC, EM, data } = response.data;
       if (EC === 0) {
         fetchNotifications();
         setOpenAdd(false);
+      } else {
+        console.error("Broadcast failed:", EM, data);
       }
     } catch (error) {
       console.error("Error broadcasting notification:", error);
@@ -658,12 +688,12 @@ const page = () => {
                       />
                       {newBroadcast.content[
                         target.toLowerCase() as keyof typeof newBroadcast.content
-                      ]?.avatar.url && (
+                      ]?.avatar?.url && (
                         <img
                           src={
                             newBroadcast.content[
                               target.toLowerCase() as keyof typeof newBroadcast.content
-                            ]!.avatar.url
+                            ]!.avatar?.url
                           }
                           alt="preview"
                           className="w-12 h-12 rounded-md"
@@ -672,7 +702,7 @@ const page = () => {
                       <span>
                         {newBroadcast.content[
                           target.toLowerCase() as keyof typeof newBroadcast.content
-                        ]?.avatar.url
+                        ]?.avatar?.url
                           ? "Change Avatar"
                           : "Upload Avatar"}
                       </span>
