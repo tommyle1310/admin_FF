@@ -14,7 +14,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Flash Companion",
+  title: "Flashstrom",
   description: "flashtrom",
 };
 

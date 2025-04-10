@@ -39,7 +39,7 @@ const SideBar = () => {
       case "SUPER_ADMIN":
         return sideBarItems;
       case "COMPANION_ADMIN":
-        return sideBarItems.filter((item) => item.title !== "App Managers");
+          return sideBarItems.filter((item) => item.title !== "App Managers" && item.title !== "Customers Statistics");
       case "FINANCE_ADMIN": {
         const filteredItems = sideBarItems.filter(
           (item) =>
