@@ -3,7 +3,6 @@ import AdminDashboard from "@/components/AdminDashboard";
 import DashboardCustomerCare from "@/components/DashboardCustomerCare";
 import { useAdminStore } from "@/stores/adminStore";
 import { useCustomerCareStore } from "@/stores/customerCareStore";
-import { useState, useEffect } from "react";
 
 export default function Home() {
   const adminLoggedInAs = useAdminStore((state) => state.user?.logged_in_as);

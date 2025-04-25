@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Paperclip,
   Smile,
@@ -14,9 +14,33 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { socket, chatSocket } from "@/lib/axios";
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
+
+  const fetchAllChats = async () => {
+    try {
+      const result = await chatSocket.getAllChats();
+      console.log("check result", result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching chats:", error);
+    }
+  };
+
+  useEffect(() => {
+    // Connect to socket when component mounts
+    socket.connect();
+
+    // Fetch chats after connection
+    fetchAllChats();
+
+    // Cleanup: disconnect socket when component unmounts
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   // Sample data for groups and people
   const groups = [
@@ -49,7 +73,7 @@ export default function ChatPage() {
     },
     { name: "Chuthiya", message: "BAAAG", time: "Today, 12:11pm", unread: 1 },
     {
-      name: "Mary ma’am",
+      name: "Mary ma'am",
       message: "You have to report it...",
       time: "Today, 2:40pm",
       unread: 1,
@@ -112,7 +136,7 @@ export default function ChatPage() {
             {groups.map((group, index) => (
               <div
                 key={index}
-                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg"
+                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
               >
                 <Avatar>
                   <AvatarImage src="" alt={group.name} />
@@ -148,7 +172,7 @@ export default function ChatPage() {
             {people.map((person, index) => (
               <div
                 key={index}
-                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg"
+                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
               >
                 <Avatar>
                   <AvatarImage src="" alt={person.name} />
