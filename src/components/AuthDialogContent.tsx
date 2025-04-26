@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   DialogContent,
   DialogHeader,
@@ -11,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import axiosInstance from "@/lib/axios";
-import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation"; // Thêm useRouter
 
 import { jwtDecode } from "jwt-decode";
@@ -35,7 +34,6 @@ interface AuthDialogContentProps {
 }
 
 const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
-  const pathname = usePathname();
   const router = useRouter(); // Khởi tạo router
 
   const [isLogin, setIsLogin] = useState(true); // State để switch giữa Login và Signup
@@ -99,15 +97,18 @@ const AuthDialogContent = ({ onClose }: AuthDialogContentProps) => {
         localStorage.setItem("access_token", accessToken);
 
         // Decode JWT
-        const decodedToken = jwtDecode<any>(accessToken);
+        const decodedToken = jwtDecode(accessToken);
 
         // Kiểm tra vai trò và set vào store tương ứng
         if (decodedToken.logged_in_as === "CUSTOMER_CARE_REPRESENTATIVE") {
           const customerCareUser = decodedToken as CustomerCareUser;
-          setCustomerCareUser(customerCareUser);
+          setCustomerCareUser({
+            ...customerCareUser,
+            accessToken: accessToken,
+          });
         } else {
           const adminUser = decodedToken as AdminUser;
-          setAdminUser(adminUser);
+          setAdminUser({ ...adminUser, accessToken: accessToken });
         }
 
         router.push("/");

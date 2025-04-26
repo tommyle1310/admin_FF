@@ -42,7 +42,6 @@ const MainNav = () => {
     adminZ?.avatar?.url ||
     customerCareZ?.avatar?.url ||
     IMAGE_LINKS.DEFAULT_AVATAR;
-    console.log('chekc act', userAvatar)
   const userFullName = adminZ
     ? `${adminZ.last_name} ${adminZ.first_name}`
     : `${customerCareZ?.last_name} ${customerCareZ?.first_name}`;

@@ -17,6 +17,7 @@ interface ContactPhone {
 // Định nghĩa interface cho dữ liệu Customer Care User
 export interface CustomerCareUser {
   email: string;
+  accessToken: string;
   user_type: string[];
   first_name: string;
   last_name: string;

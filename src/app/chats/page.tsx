@@ -14,147 +14,206 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { socket, chatSocket } from "@/lib/axios";
+import { useCustomerCareStore } from "@/stores/customerCareStore";
+import { useAdminStore } from "@/stores/adminStore";
+import { chatSocket, createSocket } from "@/lib/socket";
+
+interface LastMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderType: string;
+  content: string;
+  messageType: string;
+  timestamp: string;
+  readBy: string[];
+}
+
+interface Participant {
+  userId: string;
+  userType: string;
+}
+
+interface ChatRoom {
+  roomId: string;
+  type: string;
+  otherParticipant: Participant;
+  lastMessage: LastMessage;
+  lastActivity: string;
+  relatedId: string | null;
+}
+
+interface ChatsResponse {
+  ongoing: ChatRoom[];
+  awaiting: ChatRoom[];
+}
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
+  const [isConnected, setIsConnected] = useState(false);
+  const [socket, setSocket] = useState<ReturnType<typeof createSocket> | null>(
+    null
+  );
+  const [chats, setChats] = useState<ChatsResponse>({
+    ongoing: [],
+    awaiting: [],
+  });
+  const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
 
-  const fetchAllChats = async () => {
+  const getAccessToken = () => {
+    const customerCareStore = useCustomerCareStore.getState();
+    const adminStore = useAdminStore.getState();
+    return customerCareStore.isAuthenticated && customerCareStore.user
+      ? customerCareStore.user.accessToken
+      : adminStore.isAuthenticated && adminStore.user
+      ? adminStore.user.accessToken
+      : null;
+  };
+
+  const fetchAllChats = async (
+    socketInstance: ReturnType<typeof createSocket>
+  ) => {
     try {
-      const result = await chatSocket.getAllChats();
-      console.log("check result", result);
+      console.log("Starting to fetch all chats...");
+      console.log("Socket connection status:", socketInstance.connected);
+
+      const result = await chatSocket.getAllChats(socketInstance);
+      console.log("Successfully fetched chats:", result);
+      setChats(result);
+      // Chọn phòng chat đầu tiên nếu có
+      if (result.ongoing.length > 0) {
+        setSelectedRoomId(result.ongoing[0].roomId);
+      }
       return result;
     } catch (error) {
-      console.error("Error fetching chats:", error);
+      console.error("Error in fetchAllChats:", error);
+      throw error;
     }
   };
 
   useEffect(() => {
-    // Connect to socket when component mounts
-    socket.connect();
+    console.log("Component mounted, initializing socket...");
+    const token = getAccessToken();
+    if (!token) {
+      console.error("No token provided, skipping socket connection");
+      return;
+    }
 
-    // Fetch chats after connection
-    fetchAllChats();
+    const newSocket = createSocket(token);
+    setSocket(newSocket);
 
-    // Cleanup: disconnect socket when component unmounts
+    const handleConnect = () => {
+      console.log("Socket connected in component");
+      setIsConnected(true);
+      fetchAllChats(newSocket);
+    };
+
+    const handleDisconnect = () => {
+      console.log("Socket disconnected in component");
+      setIsConnected(false);
+    };
+
+    newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("error", (error) => {
+      console.error("Socket server error:", error);
+    });
+
+    if (newSocket.connected) {
+      console.log("Socket already connected, fetching chats...");
+      fetchAllChats(newSocket);
+    }
+
     return () => {
-      socket.disconnect();
+      console.log("Component unmounting, cleaning up socket...");
+      newSocket.off("connect", handleConnect);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.off("error");
+      newSocket.disconnect();
     };
   }, []);
 
-  // Sample data for groups and people
-  const groups = [
-    {
-      name: "Friends Forever",
-      message: "HAHAHAHA!",
-      time: "Today, 9:52pm",
-      unread: 4,
-    },
-    {
-      name: "Mera Gang",
-      message: "Kyuuuuu??",
-      time: "Yesterday, 12:31pm",
-      unread: 0,
-    },
-    {
-      name: "Hiking",
-      message: "It's not going to happen",
-      time: "Wednesday, 9:12am",
-      unread: 0,
-    },
-  ];
+  // Hàm format thời gian
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-  const people = [
-    {
-      name: "Anil",
-      message: "April fool's day",
-      time: "Today, 9:52pm",
-      unread: 0,
-    },
-    { name: "Chuthiya", message: "BAAAG", time: "Today, 12:11pm", unread: 1 },
-    {
-      name: "Mary ma'am",
-      message: "You have to report it...",
-      time: "Today, 2:40pm",
-      unread: 1,
-    },
-    {
-      name: "Bill Gates",
-      message: "Nevermind bro",
-      time: "Yesterday, 12:31pm",
-      unread: 5,
-    },
-    {
-      name: "Victoria H",
-      message: "Okay, brother, let's see...",
-      time: "Wednesday, 11:12am",
-      unread: 0,
-    },
-  ];
+    if (days === 0) {
+      return `Today, ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } else if (days === 1) {
+      return `Yesterday, ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    } else {
+      return `${date.toLocaleDateString()}, ${date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+    }
+  };
 
-  // Sample chat messages
-  const messages = [
-    {
-      sender: "Anil",
-      text: "Hey There!",
-      time: "Today, 9:52pm",
-      isSent: false,
-    },
-    {
-      sender: "Anil",
-      text: "How are you?",
-      time: "Today, 9:52pm",
-      isSent: false,
-    },
-    { sender: "You", text: "Hello!", time: "Today, 8:33pm", isSent: true },
-    {
-      sender: "You",
-      text: "I am fine and how are you?",
-      time: "Today, 8:34pm",
-      isSent: true,
-    },
-    {
-      sender: "Anil",
-      text: "I am doing well, Can we meet tomorrow?",
-      time: "Today, 8:36pm",
-      isSent: false,
-    },
-    { sender: "You", text: "Yes Sure!", time: "Today, 8:58pm", isSent: true },
-  ];
+  // Dữ liệu tin nhắn cho phòng chat được chọn
+  const selectedChat = chats.ongoing.find(
+    (chat) => chat.roomId === selectedRoomId
+  );
+  const messages = selectedChat
+    ? [
+        {
+          sender:
+            selectedChat.lastMessage.senderType === "CUSTOMER"
+              ? "Customer"
+              : "You",
+          text: selectedChat.lastMessage.content,
+          time: formatTime(selectedChat.lastMessage.timestamp),
+          isSent: selectedChat.lastMessage.senderType !== "CUSTOMER",
+        },
+      ]
+    : [];
 
   return (
-    <div className="flex ">
+    <div className="flex">
       {/* Sidebar */}
-      <div className="w-1/3  border-r border-gray-200 gap-4 p-4">
+      <div className="w-1/3 border-r border-gray-200 gap-4 p-4">
         {/* Search Bar */}
         <Input placeholder="Search" className="mb-4 bg-white" />
 
-        {/* Groups Section */}
+        {/* Ongoing Chats Section */}
         <div className="flex-col mb-4 bg-white rounded-lg shadow-md p-4">
           <h2 className="text-lg font-semibold mb-2 bg-white">Ongoing chats</h2>
           <div className="space-y-2">
-            {groups.map((group, index) => (
+            {chats.ongoing.map((chat) => (
               <div
-                key={index}
+                key={chat.roomId}
                 className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                onClick={() => setSelectedRoomId(chat.roomId)}
               >
                 <Avatar>
-                  <AvatarImage src="" alt={group.name} />
-                  <AvatarFallback>{group.name[0]}</AvatarFallback>
+                  <AvatarImage src="" alt={chat.otherParticipant.userId} />
+                  <AvatarFallback>
+                    {chat.otherParticipant.userType[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between">
-                    <span className="font-medium">{group.name}</span>
-                    <span className="text-sm text-gray-500">{group.time}</span>
+                    <span className="font-medium">
+                      {chat.otherParticipant.userType}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {formatTime(chat.lastMessage.timestamp)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">
-                      {group.message}
+                      {chat.lastMessage.content}
                     </span>
-                    {group.unread > 0 && (
-                      <Badge className="bg-danger-500 text-white">
-                        {group.unread}
-                      </Badge>
+                    {chat.lastMessage.readBy.length === 1 && (
+                      <Badge className="bg-danger-500 text-white">1</Badge>
                     )}
                   </div>
                 </div>
@@ -163,34 +222,39 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* People Section */}
+        {/* Waiting List Section */}
         <div className="flex-col bg-white rounded-lg shadow-md p-4">
           <h2 className="text-lg font-semibold mt-4 mb-2 bg-white">
             Waiting list
           </h2>
           <div className="space-y-2">
-            {people.map((person, index) => (
+            {chats.awaiting.map((chat) => (
               <div
-                key={index}
+                key={chat.roomId}
                 className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                onClick={() => setSelectedRoomId(chat.roomId)}
               >
                 <Avatar>
-                  <AvatarImage src="" alt={person.name} />
-                  <AvatarFallback>{person.name[0]}</AvatarFallback>
+                  <AvatarImage src="" alt={chat.otherParticipant.userId} />
+                  <AvatarFallback>
+                    {chat.otherParticipant.userType[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between">
-                    <span className="font-medium">{person.name}</span>
-                    <span className="text-sm text-gray-500">{person.time}</span>
+                    <span className="font-medium">
+                      {chat.otherParticipant.userType}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {formatTime(chat.lastMessage.timestamp)}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">
-                      {person.message}
+                      {chat.lastMessage.content}
                     </span>
-                    {person.unread > 0 && (
-                      <Badge className="bg-danger-500 h-4 text-white">
-                        {person.unread}
-                      </Badge>
+                    {chat.lastMessage.readBy.length === 1 && (
+                      <Badge className="bg-danger-500 h-4 text-white">1</Badge>
                     )}
                   </div>
                 </div>
@@ -203,16 +267,26 @@ export default function ChatPage() {
       {/* Chat Window */}
       <div className="flex-1 flex flex-col m-4 rounded-lg bg-white overflow-hidden shadow-md">
         {/* Chat Header */}
-        <div className=" border-b border-gray-200 p-4 flex items-center justify-between">
+        <div className="border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
-              <AvatarImage src="" alt="Anil" />
-              <AvatarFallback>A</AvatarFallback>
+              <AvatarImage
+                src=""
+                alt={selectedChat?.otherParticipant.userType || "User"}
+              />
+              <AvatarFallback>
+                {selectedChat?.otherParticipant.userType[0] || "U"}
+              </AvatarFallback>
             </Avatar>
             <div>
-              <h2 className="text-lg font-semibold">Anil</h2>
+              <h2 className="text-lg font-semibold">
+                {selectedChat?.otherParticipant.userType || "User"}
+              </h2>
               <p className="text-sm text-gray-500">
-                Online - Last seen, 2:02pm
+                Online - Last seen,{" "}
+                {selectedChat
+                  ? formatTime(selectedChat.lastActivity)
+                  : "Unknown"}
               </p>
             </div>
           </div>

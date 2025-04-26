@@ -6,6 +6,7 @@ export interface AdminUser {
   email: string;
   user_type: string[];
   first_name: string;
+  accessToken: string;
   last_name: string;
   avatar?: {
     url: string;

@@ -39,7 +39,11 @@ const SideBar = () => {
       case "SUPER_ADMIN":
         return sideBarItems;
       case "COMPANION_ADMIN":
-          return sideBarItems.filter((item) => item.title !== "App Managers" && item.title !== "Customers Statistics");
+        return sideBarItems.filter(
+          (item) =>
+            item.title !== "App Managers" &&
+            item.title !== "Customers Statistics"
+        );
       case "FINANCE_ADMIN": {
         const filteredItems = sideBarItems.filter(
           (item) =>
@@ -109,8 +113,6 @@ const SideBar = () => {
       router.push(validRoutes[0] || "/"); // Chuyển về route hợp lệ đầu tiên (thường là Dashboard)
     }
   }, [pathname, loggedInAs, validRoutes, router]);
-
-  console.log("check pathname", pathname);
 
   return (
     <div className="min-h-screen bg-white fc py-4 pl-4 col-span-2">
