@@ -17,6 +17,18 @@ import { Button } from "@/components/ui/button";
 import { useCustomerCareStore } from "@/stores/customerCareStore";
 import { useAdminStore } from "@/stores/adminStore";
 import { chatSocket, createSocket } from "@/lib/socket";
+import {
+  ChatResponse,
+  CustomerCareSender,
+  CustomerSender,
+  DriverSender,
+  RestaurantSender,
+} from "@/types/chat";
+
+interface Avatar {
+  key: string;
+  url: string;
+}
 
 interface LastMessage {
   id: string;
@@ -27,6 +39,16 @@ interface LastMessage {
   messageType: string;
   timestamp: string;
   readBy: string[];
+  customerSender: CustomerSender | null;
+  driverSender: DriverSender | null;
+  restaurantSender: RestaurantSender | null;
+  customerCareSender: CustomerCareSender | null;
+  sender:
+    | CustomerSender
+    | DriverSender
+    | RestaurantSender
+    | CustomerCareSender
+    | null;
 }
 
 interface Participant {
@@ -43,22 +65,32 @@ interface ChatRoom {
   relatedId: string | null;
 }
 
-interface ChatsResponse {
-  ongoing: ChatRoom[];
-  awaiting: ChatRoom[];
+interface ChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderType: string;
+  content: string;
+  messageType: string;
+  timestamp: string;
+  readBy: string[];
+  customerSender?: CustomerSender | null;
+  driverSender?: DriverSender | null;
+  restaurantSender?: RestaurantSender | null;
+  customerCareSender?: CustomerCareSender | null;
 }
 
 export default function ChatPage() {
   const [message, setMessage] = useState("");
-  const [isConnected, setIsConnected] = useState(false);
-  const [socket, setSocket] = useState<ReturnType<typeof createSocket> | null>(
-    null
-  );
-  const [chats, setChats] = useState<ChatsResponse>({
+  const [chats, setChats] = useState<ChatResponse>({
     ongoing: [],
     awaiting: [],
   });
   const [selectedRoomId, setSelectedRoomId] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [socket, setSocket] = useState<ReturnType<typeof createSocket> | null>(
+    null
+  );
 
   const getAccessToken = () => {
     const customerCareStore = useCustomerCareStore.getState();
@@ -82,12 +114,28 @@ export default function ChatPage() {
       setChats(result);
       // Chọn phòng chat đầu tiên nếu có
       if (result.ongoing.length > 0) {
-        setSelectedRoomId(result.ongoing[0].roomId);
+        const firstRoomId = result.ongoing[0].roomId;
+        setSelectedRoomId(firstRoomId);
+        fetchChatHistory(socketInstance, firstRoomId);
       }
       return result;
     } catch (error) {
       console.error("Error in fetchAllChats:", error);
       throw error;
+    }
+  };
+
+  const fetchChatHistory = async (
+    socketInstance: ReturnType<typeof createSocket>,
+    roomId: string
+  ) => {
+    try {
+      console.log("Fetching chat history for room:", roomId);
+      const result = await chatSocket.getChatHistory(socketInstance, roomId);
+      console.log("Successfully fetched chat history:", result);
+      setChatHistory(result.messages);
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
     }
   };
 
@@ -104,13 +152,11 @@ export default function ChatPage() {
 
     const handleConnect = () => {
       console.log("Socket connected in component");
-      setIsConnected(true);
       fetchAllChats(newSocket);
     };
 
     const handleDisconnect = () => {
       console.log("Socket disconnected in component");
-      setIsConnected(false);
     };
 
     newSocket.on("connect", handleConnect);
@@ -133,48 +179,126 @@ export default function ChatPage() {
     };
   }, []);
 
+  // Khi chọn một phòng chat, fetch lịch sử trò chuyện
+  useEffect(() => {
+    if (selectedRoomId && socket) {
+      fetchChatHistory(socket, selectedRoomId);
+    }
+  }, [selectedRoomId]);
+
   // Hàm format thời gian
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) {
-      return `Today, ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else if (days === 1) {
-      return `Yesterday, ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
-    } else {
-      return `${date.toLocaleDateString()}, ${date.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}`;
+    // Convert to seconds
+    const seconds = Math.floor(diff / 1000);
+
+    // Less than a minute
+    if (seconds < 60) {
+      return "Just now";
+    }
+
+    // Less than an hour
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) {
+      return `${minutes}m`;
+    }
+
+    // Less than a day
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return `${hours}h`;
+    }
+
+    // Less than a week
+    const days = Math.floor(hours / 24);
+    if (days < 7) {
+      return `${days}d`;
+    }
+
+    // Less than a month
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) {
+      return `${weeks}w`;
+    }
+
+    // Less than a year
+    const months = Math.floor(days / 30);
+    if (months < 12) {
+      return `${months}mo`;
+    }
+
+    // More than a year
+    const years = Math.floor(months / 12);
+    return `${years}y`;
+  };
+
+  // Hàm lấy tên sender
+  const getSenderName = (message: ChatMessage) => {
+    if (message.customerSender) {
+      return `${message.customerSender.first_name} ${message.customerSender.last_name}`;
+    } else if (message.driverSender) {
+      return `${message.driverSender.first_name} ${message.driverSender.last_name}`;
+    } else if (message.restaurantSender) {
+      return message.restaurantSender.restaurant_name;
+    } else if (message.customerCareSender) {
+      return `${message.customerCareSender.first_name} ${message.customerCareSender.last_name}`;
+    }
+    return "Unknown";
+  };
+
+  // Hàm lấy avatar URL
+  const getSenderAvatar = (message: ChatMessage) => {
+    if (message.customerSender && message.customerSender.avatar) {
+      return message.customerSender.avatar.url;
+    } else if (message.driverSender && message.driverSender.avatar) {
+      return message.driverSender.avatar.url;
+    } else if (message.restaurantSender && message.restaurantSender.avatar) {
+      return message.restaurantSender.avatar.url;
+    } else if (
+      message.customerCareSender &&
+      message.customerCareSender.avatar
+    ) {
+      return message.customerCareSender.avatar.url;
+    }
+    return "";
+  };
+
+  // Hàm kiểm tra tin nhắn có phải từ người dùng hiện tại không (Customer Care)
+  const isCurrentUser = (message: ChatMessage) => {
+    return message.senderType === "CUSTOMER_CARE_REPRESENTATIVE";
+  };
+
+  // Hàm lấy tên participant
+  const getParticipantName = (chat: ChatRoom) => {
+    const sender = chat.lastMessage.sender;
+    if (!sender) return "Unknown";
+    if ("restaurant_name" in sender) {
+      return sender.restaurant_name;
+    }
+    return `${sender.first_name} ${sender.last_name}`;
+  };
+
+  // Dữ liệu cho phòng chat được chọn
+  const selectedChat =
+    chats.ongoing.find((chat) => chat.roomId === selectedRoomId) ||
+    chats.awaiting.find((chat) => chat.roomId === selectedRoomId);
+
+  const handleSendMessage = () => {
+    if (message.trim() && selectedRoomId && socket) {
+      // Thêm code để gửi tin nhắn ở đây
+      // socket.emit("sendMessage", { roomId: selectedRoomId, content: message });
+      setMessage("");
     }
   };
 
-  // Dữ liệu tin nhắn cho phòng chat được chọn
-  const selectedChat = chats.ongoing.find(
-    (chat) => chat.roomId === selectedRoomId
-  );
-  const messages = selectedChat
-    ? [
-        {
-          sender:
-            selectedChat.lastMessage.senderType === "CUSTOMER"
-              ? "Customer"
-              : "You",
-          text: selectedChat.lastMessage.content,
-          time: formatTime(selectedChat.lastMessage.timestamp),
-          isSent: selectedChat.lastMessage.senderType !== "CUSTOMER",
-        },
-      ]
-    : [];
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSendMessage();
+    }
+  };
 
   return (
     <div className="flex">
@@ -190,21 +314,26 @@ export default function ChatPage() {
             {chats.ongoing.map((chat) => (
               <div
                 key={chat.roomId}
-                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                className={`flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer ${
+                  selectedRoomId === chat.roomId ? "bg-gray-100" : ""
+                }`}
                 onClick={() => setSelectedRoomId(chat.roomId)}
               >
                 <Avatar>
-                  <AvatarImage src="" alt={chat.otherParticipant.userId} />
+                  <AvatarImage
+                    src={getSenderAvatar(chat.lastMessage)}
+                    alt={getParticipantName(chat)}
+                  />
                   <AvatarFallback>
-                    {chat.otherParticipant.userType[0]}
+                    {getParticipantName(chat)[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between">
-                    <span className="font-medium">
-                      {chat.otherParticipant.userType}
+                    <span className="font-medium text-sm">
+                      {getParticipantName(chat)}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-xs text-gray-400">
                       {formatTime(chat.lastMessage.timestamp)}
                     </span>
                   </div>
@@ -213,7 +342,7 @@ export default function ChatPage() {
                       {chat.lastMessage.content}
                     </span>
                     {chat.lastMessage.readBy.length === 1 && (
-                      <Badge className="bg-danger-500 text-white">1</Badge>
+                      <Badge className="bg-danger-500 h-5 text-white">1</Badge>
                     )}
                   </div>
                 </div>
@@ -231,19 +360,24 @@ export default function ChatPage() {
             {chats.awaiting.map((chat) => (
               <div
                 key={chat.roomId}
-                className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer"
+                className={`flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg cursor-pointer ${
+                  selectedRoomId === chat.roomId ? "bg-gray-100" : ""
+                }`}
                 onClick={() => setSelectedRoomId(chat.roomId)}
               >
                 <Avatar>
-                  <AvatarImage src="" alt={chat.otherParticipant.userId} />
+                  <AvatarImage
+                    src={getSenderAvatar(chat.lastMessage)}
+                    alt={getParticipantName(chat)}
+                  />
                   <AvatarFallback>
-                    {chat.otherParticipant.userType[0]}
+                    {getParticipantName(chat)[0] || "U"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between">
                     <span className="font-medium">
-                      {chat.otherParticipant.userType}
+                      {getParticipantName(chat)}
                     </span>
                     <span className="text-sm text-gray-500">
                       {formatTime(chat.lastMessage.timestamp)}
@@ -271,19 +405,23 @@ export default function ChatPage() {
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage
-                src=""
-                alt={selectedChat?.otherParticipant.userType || "User"}
+                src={
+                  selectedChat && chatHistory.length > 0
+                    ? getSenderAvatar(chatHistory[0])
+                    : ""
+                }
+                alt={selectedChat ? getParticipantName(selectedChat) : "User"}
               />
               <AvatarFallback>
-                {selectedChat?.otherParticipant.userType[0] || "U"}
+                {selectedChat ? getParticipantName(selectedChat)[0] : "U"}
               </AvatarFallback>
             </Avatar>
             <div>
               <h2 className="text-lg font-semibold">
-                {selectedChat?.otherParticipant.userType || "User"}
+                {selectedChat ? getParticipantName(selectedChat) : "User"}
               </h2>
               <p className="text-sm text-gray-500">
-                Online - Last seen,{" "}
+                Online - Last seen{" "}
                 {selectedChat
                   ? formatTime(selectedChat.lastActivity)
                   : "Unknown"}
@@ -305,27 +443,38 @@ export default function ChatPage() {
 
         {/* Chat Messages */}
         <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-          {messages.map((msg, index) => (
+          {chatHistory.map((msg) => (
             <div
-              key={index}
+              key={msg.id}
               className={`flex ${
-                msg.isSent ? "justify-end" : "justify-start"
+                isCurrentUser(msg) ? "justify-end" : "justify-start"
               } mb-4`}
             >
+              {!isCurrentUser(msg) && (
+                <Avatar className="mr-2 mt-1">
+                  <AvatarImage
+                    src={getSenderAvatar(msg)}
+                    alt={getSenderName(msg)}
+                  />
+                  <AvatarFallback>
+                    {getSenderName(msg)[0] || "U"}
+                  </AvatarFallback>
+                </Avatar>
+              )}
               <div
                 className={`max-w-xs p-3 rounded-lg ${
-                  msg.isSent
+                  isCurrentUser(msg)
                     ? "bg-primary text-white"
                     : "bg-gray-200 text-gray-800"
                 }`}
               >
-                <p>{msg.text}</p>
+                <p>{msg.content}</p>
                 <p
                   className={`text-xs mt-1 ${
-                    msg.isSent ? "text-white/70" : "text-gray-500"
+                    isCurrentUser(msg) ? "text-white/70" : "text-gray-500"
                   }`}
                 >
-                  {msg.time}
+                  {formatTime(msg.timestamp)}
                 </p>
               </div>
             </div>
@@ -341,6 +490,7 @@ export default function ChatPage() {
             placeholder="Type your message here..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
             className="flex-1"
           />
           <Button variant="ghost" size="icon">
@@ -349,7 +499,12 @@ export default function ChatPage() {
           <Button variant="ghost" size="icon">
             <Camera className="h-5 w-5 text-gray-500" />
           </Button>
-          <Button variant="ghost" size="icon" className="bg-primary">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="bg-primary"
+            onClick={handleSendMessage}
+          >
             <Mic className="h-5 w-5 text-white" />
           </Button>
         </div>

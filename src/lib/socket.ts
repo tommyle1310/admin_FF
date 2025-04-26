@@ -1,45 +1,64 @@
+import { ChatResponse } from "@/types/chat";
 import { io } from "socket.io-client";
 
-interface ChatResponse {
-  ongoing: Array<{
+// interface ChatResponse {
+//   ongoing: Array<{
+//     roomId: string;
+//     type: string;
+//     otherParticipant: {
+//       userId: string;
+//       userType: string;
+//     };
+//     lastMessage: {
+//       id: string;
+//       roomId: string;
+//       senderId: string;
+//       senderType: string;
+//       content: string;
+//       messageType: string;
+//       timestamp: string;
+//       readBy: string[];
+//     };
+//     lastActivity: string;
+//     relatedId: string | null;
+//   }>;
+//   awaiting: Array<{
+//     roomId: string;
+//     type: string;
+//     otherParticipant: {
+//       userId: string;
+//       userType: string;
+//     };
+//     lastMessage: {
+//       id: string;
+//       roomId: string;
+//       senderId: string;
+//       senderType: string;
+//       content: string;
+//       messageType: string;
+//       timestamp: string;
+//       readBy: string[];
+//     };
+//     lastActivity: string;
+//     relatedId: string | null;
+//   }>;
+// }
+
+interface ChatHistoryResponse {
+  roomId: string;
+  messages: Array<{
+    id: string;
     roomId: string;
-    type: string;
-    otherParticipant: {
-      userId: string;
-      userType: string;
-    };
-    lastMessage: {
-      id: string;
-      roomId: string;
-      senderId: string;
-      senderType: string;
-      content: string;
-      messageType: string;
-      timestamp: string;
-      readBy: string[];
-    };
-    lastActivity: string;
-    relatedId: string | null;
-  }>;
-  awaiting: Array<{
-    roomId: string;
-    type: string;
-    otherParticipant: {
-      userId: string;
-      userType: string;
-    };
-    lastMessage: {
-      id: string;
-      roomId: string;
-      senderId: string;
-      senderType: string;
-      content: string;
-      messageType: string;
-      timestamp: string;
-      readBy: string[];
-    };
-    lastActivity: string;
-    relatedId: string | null;
+    senderId: string;
+    senderType: string;
+    content: string;
+    messageType: string;
+    timestamp: string;
+    readBy: string[];
+    customerSender?: { first_name: string; last_name: string } | null;
+    driverSender?: { first_name: string; last_name: string } | null;
+    restaurantSender?: { restaurant_name: string } | null;
+    customerCareSender?: { first_name: string; last_name: string } | null;
   }>;
 }
 
@@ -126,6 +145,35 @@ export const chatSocket = {
           }
         }
       );
+    });
+  },
+
+  getChatHistory: (socket: ReturnType<typeof io>, roomId: string) => {
+    return new Promise<ChatHistoryResponse>((resolve, reject) => {
+      console.log("Emitting getChatHistory event for room:", roomId);
+
+      if (!socket.connected) {
+        console.log("Socket not connected, attempting to connect...");
+        socket.connect();
+      }
+
+      // Listen for chatHistory event
+      const handleChatHistory = (response: ChatHistoryResponse) => {
+        console.log("Received chat history:", response);
+        socket.off("chatHistory", handleChatHistory);
+        resolve(response);
+      };
+
+      socket.on("chatHistory", handleChatHistory);
+
+      // Emit getChatHistory event
+      socket.emit("getChatHistory", { roomId }, (error: string) => {
+        if (error) {
+          console.error("Error in getChatHistory:", error);
+          socket.off("chatHistory", handleChatHistory);
+          reject(error);
+        }
+      });
     });
   },
 };
