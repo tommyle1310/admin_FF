@@ -1,65 +1,9 @@
-import { ChatResponse } from "@/types/chat";
+import { ChatMessage, ChatResponse } from "@/types/chat";
 import { io } from "socket.io-client";
-
-// interface ChatResponse {
-//   ongoing: Array<{
-//     roomId: string;
-//     type: string;
-//     otherParticipant: {
-//       userId: string;
-//       userType: string;
-//     };
-//     lastMessage: {
-//       id: string;
-//       roomId: string;
-//       senderId: string;
-//       senderType: string;
-//       content: string;
-//       messageType: string;
-//       timestamp: string;
-//       readBy: string[];
-//     };
-//     lastActivity: string;
-//     relatedId: string | null;
-//   }>;
-//   awaiting: Array<{
-//     roomId: string;
-//     type: string;
-//     otherParticipant: {
-//       userId: string;
-//       userType: string;
-//     };
-//     lastMessage: {
-//       id: string;
-//       roomId: string;
-//       senderId: string;
-//       senderType: string;
-//       content: string;
-//       messageType: string;
-//       timestamp: string;
-//       readBy: string[];
-//     };
-//     lastActivity: string;
-//     relatedId: string | null;
-//   }>;
-// }
 
 interface ChatHistoryResponse {
   roomId: string;
-  messages: Array<{
-    id: string;
-    roomId: string;
-    senderId: string;
-    senderType: string;
-    content: string;
-    messageType: string;
-    timestamp: string;
-    readBy: string[];
-    customerSender?: { first_name: string; last_name: string } | null;
-    driverSender?: { first_name: string; last_name: string } | null;
-    restaurantSender?: { restaurant_name: string } | null;
-    customerCareSender?: { first_name: string; last_name: string } | null;
-  }>;
+  messages: ChatMessage[];
 }
 
 let socketInstance: ReturnType<typeof io> | null = null;
@@ -174,6 +118,46 @@ export const chatSocket = {
           reject(error);
         }
       });
+    });
+  },
+  sendMessage: (
+    socket: ReturnType<typeof io>,
+    roomId: string,
+    content: string,
+    type: "TEXT" | "IMAGE" | "VIDEO" | "ORDER_INFO"
+  ) => {
+    return new Promise<ChatMessage>((resolve, reject) => {
+      console.log("Emitting sendMessage event", { roomId, content, type });
+
+      if (!socket.connected) {
+        console.log("Socket not connected, attempting to connect...");
+        socket.connect();
+      }
+
+      socket.emit(
+        "sendMessage",
+        { roomId, content, type },
+        (response: ChatMessage | { error: string }) => {
+          console.log("Received response from sendMessage:", response);
+          if ("error" in response) {
+            console.error("Error in sendMessage response:", response.error);
+            reject(new Error(response.error));
+          } else {
+            resolve(response);
+          }
+        }
+      );
+    });
+  },
+
+  onNewMessage: (
+    socket: ReturnType<typeof io>,
+    callback: (message: ChatMessage) => void
+  ) => {
+    console.log("Setting up newMessage listener");
+    socket.on("newMessage", (message: ChatMessage) => {
+      console.log("Received new message:", message);
+      callback(message);
     });
   },
 };

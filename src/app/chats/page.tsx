@@ -23,6 +23,8 @@ import {
   CustomerSender,
   DriverSender,
   RestaurantSender,
+  ChatMessage,
+  Message,
 } from "@/types/chat";
 
 interface Avatar {
@@ -54,6 +56,13 @@ interface LastMessage {
 interface Participant {
   userId: string;
   userType: string;
+  first_name?: string;
+  last_name?: string;
+  restaurant_name?: string;
+  avatar?: Avatar | null;
+  phone?: string;
+  contact_email?: string[];
+  contact_phone?: { phone: string }[];
 }
 
 interface ChatRoom {
@@ -63,21 +72,6 @@ interface ChatRoom {
   lastMessage: LastMessage;
   lastActivity: string;
   relatedId: string | null;
-}
-
-interface ChatMessage {
-  id: string;
-  roomId: string;
-  senderId: string;
-  senderType: string;
-  content: string;
-  messageType: string;
-  timestamp: string;
-  readBy: string[];
-  customerSender?: CustomerSender | null;
-  driverSender?: DriverSender | null;
-  restaurantSender?: RestaurantSender | null;
-  customerCareSender?: CustomerCareSender | null;
 }
 
 export default function ChatPage() {
@@ -112,11 +106,10 @@ export default function ChatPage() {
       const result = await chatSocket.getAllChats(socketInstance);
       console.log("Successfully fetched chats:", result);
       setChats(result);
-      // Chọn phòng chat đầu tiên nếu có
-      if (result.ongoing.length > 0) {
+      // Select the first chat room if available
+      if (result.ongoing.length > 0 && !selectedRoomId) {
         const firstRoomId = result.ongoing[0].roomId;
         setSelectedRoomId(firstRoomId);
-        fetchChatHistory(socketInstance, firstRoomId);
       }
       return result;
     } catch (error) {
@@ -165,6 +158,16 @@ export default function ChatPage() {
       console.error("Socket server error:", error);
     });
 
+    // Set up new message listener
+    chatSocket.onNewMessage(newSocket, (message: ChatMessage) => {
+      console.log("New message received:", message);
+      if (message.roomId === selectedRoomId) {
+        setChatHistory((prev) => [...prev, message]);
+      }
+      // Fetch all chats to update the sidebar (optional for synchronization)
+      fetchAllChats(newSocket);
+    });
+
     if (newSocket.connected) {
       console.log("Socket already connected, fetching chats...");
       fetchAllChats(newSocket);
@@ -175,67 +178,41 @@ export default function ChatPage() {
       newSocket.off("connect", handleConnect);
       newSocket.off("disconnect", handleDisconnect);
       newSocket.off("error");
+      newSocket.off("newMessage");
       newSocket.disconnect();
     };
   }, []);
 
-  // Khi chọn một phòng chat, fetch lịch sử trò chuyện
+  // Fetch chat history when selectedRoomId changes
   useEffect(() => {
     if (selectedRoomId && socket) {
       fetchChatHistory(socket, selectedRoomId);
     }
-  }, [selectedRoomId]);
+  }, [selectedRoomId, socket]);
 
-  // Hàm format thời gian
+  // Format timestamp
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
-
-    // Convert to seconds
     const seconds = Math.floor(diff / 1000);
 
-    // Less than a minute
-    if (seconds < 60) {
-      return "Just now";
-    }
-
-    // Less than an hour
+    if (seconds < 60) return "Just now";
     const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-
-    // Less than a day
+    if (minutes < 60) return `${minutes}m`;
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) {
-      return `${hours}h`;
-    }
-
-    // Less than a week
+    if (hours < 24) return `${hours}h`;
     const days = Math.floor(hours / 24);
-    if (days < 7) {
-      return `${days}d`;
-    }
-
-    // Less than a month
+    if (days < 7) return `${days}d`;
     const weeks = Math.floor(days / 7);
-    if (weeks < 4) {
-      return `${weeks}w`;
-    }
-
-    // Less than a year
+    if (weeks < 4) return `${weeks}w`;
     const months = Math.floor(days / 30);
-    if (months < 12) {
-      return `${months}mo`;
-    }
-
-    // More than a year
+    if (months < 12) return `${months}mo`;
     const years = Math.floor(months / 12);
     return `${years}y`;
   };
 
-  // Hàm lấy tên sender
+  // Get sender name
   const getSenderName = (message: ChatMessage) => {
     if (message.customerSender) {
       return `${message.customerSender.first_name} ${message.customerSender.last_name}`;
@@ -249,8 +226,8 @@ export default function ChatPage() {
     return "Unknown";
   };
 
-  // Hàm lấy avatar URL
-  const getSenderAvatar = (message: ChatMessage) => {
+  // Get sender avatar
+  const getSenderAvatar = (message: ChatMessage | Message) => {
     if (message.customerSender && message.customerSender.avatar) {
       return message.customerSender.avatar.url;
     } else if (message.driverSender && message.driverSender.avatar) {
@@ -266,31 +243,49 @@ export default function ChatPage() {
     return "";
   };
 
-  // Hàm kiểm tra tin nhắn có phải từ người dùng hiện tại không (Customer Care)
+  // Check if message is from current user
   const isCurrentUser = (message: ChatMessage) => {
     return message.senderType === "CUSTOMER_CARE_REPRESENTATIVE";
   };
 
-  // Hàm lấy tên participant
+  // Get participant name
   const getParticipantName = (chat: ChatRoom) => {
-    const sender = chat.lastMessage.sender;
-    if (!sender) return "Unknown";
-    if ("restaurant_name" in sender) {
-      return sender.restaurant_name;
+    const participant = chat.otherParticipant;
+    if (!participant) return "Unknown";
+    if (participant.restaurant_name) {
+      return participant.restaurant_name;
     }
-    return `${sender.first_name} ${sender.last_name}`;
+    return (
+      `${participant.first_name || ""} ${participant.last_name || ""}`.trim() ||
+      "Unknown"
+    );
   };
 
-  // Dữ liệu cho phòng chat được chọn
+  // Get participant avatar
+  const getParticipantAvatar = (chat: ChatRoom) => {
+    return chat.otherParticipant?.avatar?.url || "";
+  };
+
   const selectedChat =
     chats.ongoing.find((chat) => chat.roomId === selectedRoomId) ||
     chats.awaiting.find((chat) => chat.roomId === selectedRoomId);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (message.trim() && selectedRoomId && socket) {
-      // Thêm code để gửi tin nhắn ở đây
-      // socket.emit("sendMessage", { roomId: selectedRoomId, content: message });
-      setMessage("");
+      try {
+        const newMessage = await chatSocket.sendMessage(
+          socket,
+          selectedRoomId,
+          message,
+          "TEXT"
+        );
+        setChatHistory((prev) => [...prev, newMessage]);
+        setMessage("");
+        // Fetch all chats to update the sidebar (optional)
+        await fetchAllChats(socket);
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
     }
   };
 
@@ -304,10 +299,7 @@ export default function ChatPage() {
     <div className="flex">
       {/* Sidebar */}
       <div className="w-1/3 border-r border-gray-200 gap-4 p-4">
-        {/* Search Bar */}
         <Input placeholder="Search" className="mb-4 bg-white" />
-
-        {/* Ongoing Chats Section */}
         <div className="flex-col mb-4 bg-white rounded-lg shadow-md p-4">
           <h2 className="text-lg font-semibold mb-2 bg-white">Ongoing chats</h2>
           <div className="space-y-2">
@@ -321,7 +313,7 @@ export default function ChatPage() {
               >
                 <Avatar>
                   <AvatarImage
-                    src={getSenderAvatar(chat.lastMessage)}
+                    src={getParticipantAvatar(chat)}
                     alt={getParticipantName(chat)}
                   />
                   <AvatarFallback>
@@ -350,8 +342,6 @@ export default function ChatPage() {
             ))}
           </div>
         </div>
-
-        {/* Waiting List Section */}
         <div className="flex-col bg-white rounded-lg shadow-md p-4">
           <h2 className="text-lg font-semibold mt-4 mb-2 bg-white">
             Waiting list
@@ -367,7 +357,7 @@ export default function ChatPage() {
               >
                 <Avatar>
                   <AvatarImage
-                    src={getSenderAvatar(chat.lastMessage)}
+                    src={getParticipantAvatar(chat)}
                     alt={getParticipantName(chat)}
                   />
                   <AvatarFallback>
@@ -400,16 +390,11 @@ export default function ChatPage() {
 
       {/* Chat Window */}
       <div className="flex-1 flex flex-col m-4 rounded-lg bg-white overflow-hidden shadow-md">
-        {/* Chat Header */}
         <div className="border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <Avatar>
               <AvatarImage
-                src={
-                  selectedChat && chatHistory.length > 0
-                    ? getSenderAvatar(chatHistory[0])
-                    : ""
-                }
+                src={selectedChat ? getParticipantAvatar(selectedChat) : ""}
                 alt={selectedChat ? getParticipantName(selectedChat) : "User"}
               />
               <AvatarFallback>
@@ -441,7 +426,6 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* Chat Messages */}
         <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
           {chatHistory.map((msg) => (
             <div
@@ -481,7 +465,6 @@ export default function ChatPage() {
           ))}
         </div>
 
-        {/* Message Input */}
         <div className="bg-white border-t border-gray-200 p-4 flex items-center space-x-2">
           <Button variant="ghost" size="icon">
             <Paperclip className="h-5 w-5 text-gray-500" />

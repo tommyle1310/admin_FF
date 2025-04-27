@@ -66,3 +66,43 @@ export interface ChatResponse {
   ongoing: ChatRoom[];
   awaiting: ChatRoom[];
 }
+
+export interface ChatMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  senderType: string;
+  content: string;
+  messageType: string;
+  timestamp: string;
+  readBy: string[];
+  customerSender?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar?: { key: string; url: string } | null;
+    phone: string;
+  } | null;
+  driverSender?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar?: { key: string; url: string } | null;
+    contact_email: string | string[];
+    contact_phone: string | { is_default: boolean; number: string }[];
+  } | null;
+  restaurantSender?: {
+    id: string;
+    restaurant_name: string;
+    avatar?: { key: string; url: string } | null;
+    contact_email: string | string[];
+    contact_phone: string | { is_default: boolean; number: string }[];
+  } | null;
+  customerCareSender?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    avatar?: { key: string; url: string } | null;
+    contact_phone: string | { is_default: boolean; number: string }[];
+  } | null;
+}
